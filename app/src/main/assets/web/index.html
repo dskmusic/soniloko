@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#130404">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>SoniLoko</title>
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="icons/favicon.svg">
+<link rel="apple-touch-icon" href="icons/icon.svg">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="rotate-overlay" class="rotate-overlay">
+  <div>
+    <i class="fa" data-icon="mobile-alt"></i>
+    <p data-i18n="rotate_device_message">Gira tu dispositivo: SoniLoko solo funciona en vertical.</p>
+  </div>
+</div>
+
+<div id="app-root" class="app-root">
+  <header class="topbar">
+    <div class="brand">
+      <svg class="logo" viewBox="0 0 108 108" aria-hidden="true">
+        <circle cx="54" cy="54" r="34" fill="#fff"/>
+        <circle cx="54" cy="54" r="20" fill="var(--primary)"/>
+        <circle cx="54" cy="54" r="10" fill="#fff"/>
+      </svg>
+      <span class="brand-title">SoniLoko</span>
+    </div>
+    <div class="topbar-actions">
+      <button class="icon-btn" id="btn-kits" aria-label="Kits"><i class="fa" data-icon="music"></i></button>
+      <button class="icon-btn" id="btn-edit-mode" aria-label="Editar"><i class="fa" data-icon="wrench"></i></button>
+      <button class="icon-btn" id="btn-help" aria-label="Ayuda"><i class="fa" data-icon="lightbulb"></i></button>
+      <button class="icon-btn" id="btn-settings" aria-label="Configuración"><i class="fa" data-icon="cog"></i></button>
+    </div>
+  </header>
+
+  <div id="kit-menu" class="dropdown hidden">
+    <div class="dropdown-section" id="kit-menu-builtin"></div>
+    <div class="dropdown-divider"></div>
+    <div class="dropdown-section" id="kit-menu-custom"></div>
+    <div class="dropdown-divider"></div>
+    <button class="dropdown-item" id="btn-save-kit" data-i18n="save_current_kit">Guardar kit actual</button>
+    <button class="dropdown-item" id="btn-manage-kits" data-i18n="manage_kits_title">Gestionar mis kits</button>
+  </div>
+
+  <div class="speaker" id="speaker">
+    <div class="speaker-dots" id="speaker-dots"></div>
+  </div>
+
+  <main class="board" id="board"></main>
+
+  <footer class="footer">
+    <span data-i18n="made_with">Hecho con</span> <span class="heart">❤️</span> <span data-i18n="by">por</span>
+    <a href="https://www.dskmusic.com/dsk_dev_redirect.php" target="_blank" rel="noopener">DSK</a>
+  </footer>
+</div>
+
+<!-- Settings -->
+<div id="settings-panel" class="overlay hidden">
+  <div class="panel">
+    <div class="panel-header">
+      <button class="icon-btn" id="btn-settings-back"><i class="fa" data-icon="arrow-left"></i></button>
+      <h2 data-i18n="settings">Configuración</h2>
+    </div>
+    <div class="panel-body">
+
+      <section class="card">
+        <h3 data-i18n="language">Idioma</h3>
+        <div class="radio-group" id="language-options"></div>
+      </section>
+
+      <section class="card">
+        <h3 data-i18n="master_volume">Volumen general</h3>
+        <input type="range" id="master-volume" min="0" max="1" step="0.01">
+      </section>
+
+      <section class="card">
+        <h3 data-i18n="theme">Tema</h3>
+        <div class="swatch-row" id="theme-swatches"></div>
+      </section>
+
+      <section class="card row-card">
+        <div class="row-text">
+          <h3 data-i18n="preview_sounds_setting">Vista previa de sonidos</h3>
+          <p data-i18n="preview_sounds_setting_hint">Reproduce el sonido al seleccionarlo en la lista.</p>
+        </div>
+        <label class="switch"><input type="checkbox" id="toggle-preview"><span class="slider"></span></label>
+      </section>
+
+      <section class="card row-card">
+        <div class="row-text">
+          <h3 data-i18n="haptic_feedback_setting">Vibración al tocar</h3>
+          <p data-i18n="haptic_feedback_setting_hint">Pequeña vibración al pulsar un botón (si el dispositivo lo soporta).</p>
+        </div>
+        <label class="switch"><input type="checkbox" id="toggle-haptics"><span class="slider"></span></label>
+      </section>
+
+      <section class="card">
+        <div class="row-card" style="padding:0;">
+          <div class="row-text">
+            <h3 data-i18n="allow_long_sounds">Permitir sonidos largos</h3>
+            <p data-i18n="allow_long_sounds_hint">Si está desactivado, se cortan a la duración máxima.</p>
+          </div>
+          <label class="switch"><input type="checkbox" id="toggle-long-sounds"><span class="slider"></span></label>
+        </div>
+        <div id="duration-selector-wrap" class="hidden">
+          <div class="chip-row" id="duration-chips"></div>
+        </div>
+      </section>
+
+      <section class="card row-card">
+        <div class="row-text">
+          <h3 data-i18n="allow_simultaneous_sounds">Sonidos simultáneos</h3>
+          <p data-i18n="allow_simultaneous_sounds_hint">Permite superponer varios sonidos a la vez.</p>
+        </div>
+        <label class="switch"><input type="checkbox" id="toggle-simultaneous"><span class="slider"></span></label>
+      </section>
+
+      <section class="card" id="install-card" style="display:none;">
+        <h3 data-i18n="install_app">Instalar aplicación</h3>
+        <button class="btn btn-primary" id="btn-install"><span data-i18n="install_app">Instalar aplicación</span></button>
+      </section>
+
+      <section class="card">
+        <div class="btn-row">
+          <button class="btn" id="btn-export" data-i18n="export">Exportar</button>
+          <button class="btn" id="btn-import" data-i18n="import_">Importar</button>
+        </div>
+        <input type="file" id="import-file-input" accept="application/json" class="visually-hidden">
+      </section>
+
+      <section class="card">
+        <button class="btn btn-danger" id="btn-factory-reset" data-i18n="factory_reset">Restablecer valores de fábrica</button>
+      </section>
+    </div>
+  </div>
+</div>
+
+<!-- Edit button dialog -->
+<div id="edit-dialog" class="overlay hidden">
+  <div class="modal">
+    <h2 data-i18n="edit_button_title">Editar botón</h2>
+    <div class="preview-row">
+      <div id="edit-preview" class="board-btn preview-btn"></div>
+    </div>
+    <div class="field-row btn-row">
+      <button class="btn" id="btn-choose-icon" data-i18n="choose_icon">Elegir icono</button>
+      <button class="btn" id="btn-choose-image" data-i18n="choose_image">Elegir imagen</button>
+      <button class="btn" id="btn-remove-image" data-i18n="remove_image">Quitar imagen</button>
+    </div>
+    <input type="file" id="image-file-input" accept="image/*" class="visually-hidden">
+    <label class="field-label" data-i18n="button_text">Texto personalizado (opcional)</label>
+    <input type="text" id="edit-text-input" class="text-input" maxlength="16">
+    <label class="field-label" data-i18n="sound">Sonido</label>
+    <button class="btn full-width" id="btn-choose-sound"></button>
+    <label class="field-label" data-i18n="volume">Volumen</label>
+    <input type="range" id="edit-volume" min="0" max="1" step="0.01">
+    <div class="field-row btn-row modal-actions">
+      <button class="btn" id="btn-edit-cancel" data-i18n="cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-edit-save" data-i18n="save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Icon picker -->
+<div id="icon-picker-dialog" class="overlay hidden">
+  <div class="modal">
+    <input type="text" id="icon-search" class="text-input" data-i18n-placeholder="search_icons" placeholder="Buscar icono…">
+    <div class="icon-grid" id="icon-grid"></div>
+    <button class="btn full-width" id="btn-icon-picker-close" data-i18n="close">Cerrar</button>
+  </div>
+</div>
+
+<!-- Sound picker -->
+<div id="sound-picker-dialog" class="overlay hidden">
+  <div class="modal">
+    <input type="text" id="sound-search" class="text-input" data-i18n-placeholder="search_sounds" placeholder="Buscar sonido…">
+    <button class="dropdown-item" id="btn-record-sound" data-i18n="record_sound_option">Grabar sonido…</button>
+    <button class="dropdown-item" id="btn-import-sound" data-i18n="import_sound_from_device">Importar sonido desde el dispositivo…</button>
+    <input type="file" id="sound-file-input" accept="audio/*" class="visually-hidden">
+    <div class="sound-list" id="sound-list"></div>
+    <button class="btn full-width" id="btn-sound-picker-close" data-i18n="close">Cerrar</button>
+  </div>
+</div>
+
+<!-- Record sound dialog -->
+<div id="record-dialog" class="overlay hidden">
+  <div class="modal">
+    <h2 data-i18n="record_sound_title">Grabar sonido</h2>
+    <div class="record-visual">
+      <button class="record-btn" id="btn-record-toggle"><i class="fa" data-icon="microphone"></i></button>
+      <span id="record-toggle-label">Grabar</span>
+      <span id="record-timer">00:00</span>
+    </div>
+    <button class="btn full-width hidden" id="btn-record-play" data-i18n="play_recording">Reproducir</button>
+    <input type="text" id="record-name-input" class="text-input hidden" data-i18n-placeholder="sound_name" placeholder="Nombre del sonido">
+    <div class="field-row btn-row modal-actions">
+      <button class="btn" id="btn-record-cancel" data-i18n="cancel">Cancelar</button>
+      <button class="btn btn-primary hidden" id="btn-record-save" data-i18n="save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Save kit dialog -->
+<div id="save-kit-dialog" class="overlay hidden">
+  <div class="modal">
+    <h2 data-i18n="save_current_kit">Guardar kit actual</h2>
+    <input type="text" id="save-kit-name-input" class="text-input" data-i18n-placeholder="kit_name" placeholder="Nombre del kit">
+    <div class="field-row btn-row modal-actions">
+      <button class="btn" id="btn-save-kit-cancel" data-i18n="cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-save-kit-confirm" data-i18n="save">Guardar</button>
+    </div>
+  </div>
+</div>
+
+<!-- Manage kits dialog -->
+<div id="manage-kits-dialog" class="overlay hidden">
+  <div class="modal">
+    <h2 data-i18n="manage_kits_title">Gestionar mis kits</h2>
+    <div class="sound-list" id="manage-kits-list"></div>
+    <button class="btn full-width" id="btn-manage-kits-close" data-i18n="close">Cerrar</button>
+  </div>
+</div>
+
+<!-- Help dialog -->
+<div id="help-dialog" class="overlay hidden">
+  <div class="modal">
+    <h2 data-i18n="help_title">Acerca de SoniLoko</h2>
+    <div class="help-body" id="help-body"></div>
+    <button class="btn full-width" id="btn-help-close" data-i18n="close">Cerrar</button>
+  </div>
+</div>
+
+<!-- Generic confirm dialog -->
+<div id="confirm-dialog" class="overlay hidden">
+  <div class="modal">
+    <h2 id="confirm-title"></h2>
+    <p id="confirm-message"></p>
+    <div class="field-row btn-row modal-actions">
+      <button class="btn" id="btn-confirm-cancel" data-i18n="cancel">Cancelar</button>
+      <button class="btn btn-primary" id="btn-confirm-ok" data-i18n="yes">Sí</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/i18n.js"></script>
+<script src="js/fa-icons.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>

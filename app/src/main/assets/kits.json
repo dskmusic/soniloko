@@ -1,0 +1,73 @@
+{
+  "kits": [
+    {
+      "id": "memes41",
+      "name": { "es": "Memes 01", "en": "Memes 01" },
+      "buttons": [
+        {"id": 1, "icon": "drum", "sound": "tambor_comedia.mp3", "volume": 1.0},
+        {"id": 2, "icon": "skull", "sound": "aaaaaahhhhh.mp3", "volume": 1.0},
+        {"id": 3, "icon": "frown", "sound": "ahh.mp3", "volume": 1.0},
+        {"id": 4, "icon": "gamepad", "sound": "amongus.mp3", "volume": 1.0},
+        {"id": 5, "icon": "bullhorn", "sound": "bocina.mp3", "volume": 1.0},
+        {"id": 6, "icon": "thumbs-down", "sound": "bofetada.mp3", "volume": 1.0},
+        {"id": 7, "icon": "music", "sound": "bra.mp3", "volume": 1.0},
+        {"id": 8, "icon": "rocket", "sound": "cartoon_up.mp3", "volume": 1.0},
+        {"id": 9, "icon": "theater-masks", "sound": "chanchanchan_dramático.mp3", "volume": 1.0},
+        {"id": 10, "icon": "film", "sound": "créditos_finales.mp3", "volume": 1.0},
+        {"id": 11, "icon": "music", "sound": "disco_rayado.mp3", "volume": 1.0},
+        {"id": 12, "icon": "bomb", "sound": "error.mp3", "volume": 1.0}
+      ]
+    },
+    {
+      "id": "memes2",
+      "name": { "es": "Memes 02", "en": "Memes 02" },
+      "buttons": [
+        {"id": 1, "icon": "meh", "sound": "fallo_cómico.mp3", "volume": 1.0},
+        {"id": 2, "icon": "shield-alt", "sound": "fbi_open_door.mp3", "volume": 1.0},
+        {"id": 3, "icon": "music", "sound": "flauta_mal_titanic.mp3", "volume": 1.0},
+        {"id": 4, "icon": "bug", "sound": "grillos.mp3", "volume": 1.0},
+        {"id": 5, "icon": "paw", "sound": "grito_cabra.mp3", "volume": 1.0},
+        {"id": 6, "icon": "gamepad", "sound": "gta_music.mp3", "volume": 1.0},
+        {"id": 7, "icon": "skull", "sound": "gta_wasted.mp3", "volume": 1.0},
+        {"id": 8, "icon": "dog", "sound": "guuauu.mp3", "volume": 1.0},
+        {"id": 9, "icon": "dragon", "sound": "jurassic_park1.mp3", "volume": 1.0},
+        {"id": 10, "icon": "dragon", "sound": "jurassic_park2.mp3", "volume": 1.0},
+        {"id": 11, "icon": "gem", "sound": "mario_moneda.mp3", "volume": 1.0},
+        {"id": 12, "icon": "gamepad", "sound": "mario_salto.mp3", "volume": 1.0}
+      ]
+    },
+    {
+      "id": "memes3",
+      "name": { "es": "Memes 03", "en": "Memes 03" },
+      "buttons": [
+        {"id": 1, "icon": "satellite-dish", "sound": "música_expedienteX.mp3", "volume": 1.0},
+        {"id": 2, "icon": "skull-crossbones", "sound": "música_psicosis.mp3", "volume": 1.0},
+        {"id": 3, "icon": "skull", "sound": "música_se_murió.mp3", "volume": 1.0},
+        {"id": 4, "icon": "hourglass", "sound": "música_tensión.mp3", "volume": 1.0},
+        {"id": 5, "icon": "hourglass", "sound": "música_tensión2.mp3", "volume": 1.0},
+        {"id": 6, "icon": "hourglass", "sound": "música_tensión3.mp3", "volume": 1.0},
+        {"id": 7, "icon": "fish", "sound": "música_tiburón.mp3", "volume": 1.0},
+        {"id": 8, "icon": "walking", "sound": "música_y_se_marchó.mp3", "volume": 1.0},
+        {"id": 9, "icon": "dove", "sound": "pato.mp3", "volume": 1.0},
+        {"id": 10, "icon": "wind", "sound": "pedo.mp3", "volume": 1.0},
+        {"id": 11, "icon": "shield-alt", "sound": "pistola_cargar.mp3", "volume": 1.0},
+        {"id": 12, "icon": "bolt", "sound": "pistola_disparo.mp3", "volume": 1.0}
+      ]
+    },
+    {
+      "id": "memes4",
+      "name": { "es": "Memes 04", "en": "Memes 04" },
+      "buttons": [
+        {"id": 1, "icon": "clock", "sound": "rebobinar.mp3", "volume": 1.0},
+        {"id": 2, "icon": "cat", "sound": "risa_gato.mp3", "volume": 1.0},
+        {"id": 3, "icon": "skull", "sound": "roblox_muerte.mp3", "volume": 1.0},
+        {"id": 4, "icon": "gift", "sound": "sorpresa.mp3", "volume": 1.0},
+        {"id": 5, "icon": "star", "sound": "sorpresa2.mp3", "volume": 1.0},
+        {"id": 6, "icon": "drum", "sound": "tambor_redoble.mp3", "volume": 1.0},
+        {"id": 7, "icon": "bell", "sound": "tipu.mp3", "volume": 1.0},
+        {"id": 8, "icon": "frog", "sound": "tortuga_gimiendo1.mp3", "volume": 1.0},
+        {"id": 9, "icon": "frog", "sound": "tortuga_gimiendo2.mp3", "volume": 1.0}
+      ]
+    }
+  ]
+}
