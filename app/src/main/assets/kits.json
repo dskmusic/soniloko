@@ -66,7 +66,9 @@
         {"id": 6, "icon": "drum", "sound": "tambor_redoble.mp3", "volume": 1.0},
         {"id": 7, "icon": "bell", "sound": "tipu.mp3", "volume": 1.0},
         {"id": 8, "icon": "frog", "sound": "tortuga_gimiendo1.mp3", "volume": 1.0},
-        {"id": 9, "icon": "frog", "sound": "tortuga_gimiendo2.mp3", "volume": 1.0}
+        {"id": 9, "icon": "frog", "sound": "tortuga_gimiendo2.mp3", "volume": 1.0},
+        {"id": 10, "icon": "meh", "sound": "oh_my_god_ooomagaaaa.mp3", "volume": 1.0}
+
       ]
     }
   ]
