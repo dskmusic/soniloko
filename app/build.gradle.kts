@@ -18,7 +18,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = true
+            // NewPipeExtractor pulls in Mozilla Rhino, whose R8 shrinking issues (missing
+            // desktop-only java.beans/javax.script classes) can go deeper than a couple of
+            // -dontwarn rules fix. Not a Play Store app, so a slightly larger APK is an easy
+            // trade for a build that doesn't fight R8 every release — same call DSK LoFi made.
+            isMinifyEnabled = false
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
         }
     }
