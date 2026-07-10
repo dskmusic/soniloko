@@ -109,7 +109,14 @@ jobs:
 
       - name: Decodificar keystore
         if: steps.newpipe.outputs.should_build == 'true'
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 -d > app/release.keystore
+        run: |
+          RAW_LEN=$(printf '%s' "${{ secrets.KEYSTORE_BASE64 }}" | wc -c)
+          echo "Longitud del secret KEYSTORE_BASE64 recibido: $RAW_LEN caracteres"
+          if [ "$RAW_LEN" -eq 0 ]; then
+            echo "::error::El secret KEYSTORE_BASE64 llega vacío al runner. Revisa en GitHub Settings > Secrets and variables > Actions que el secret KEYSTORE_BASE64 (a nivel de repo, no de Environment) tenga contenido y que el workflow no esté usando un Environment sin ese secret."
+            exit 1
+          fi
+          echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 -d > app/release.keystore
 
       - name: Verificar formato del keystore decodificado
         if: steps.newpipe.outputs.should_build == 'true'
