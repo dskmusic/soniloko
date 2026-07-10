@@ -49,8 +49,12 @@ Si ya tienes uno que uses para DSK LoFi puedes reutilizarlo o crear uno nuevo es
 SoniLoko. Para crear uno nuevo (requiere el JDK, `keytool` viene incluido):
 
 ```bash
-keytool -genkey -v -keystore soniloko-release.keystore -alias soniloko -keyalg RSA -keysize 2048 -validity 10000
+keytool -genkey -v -keystore soniloko-release.keystore -alias soniloko -keyalg RSA -keysize 2048 -validity 10000 -storetype JKS
 ```
+
+`-storetype JKS` es importante: los JDK recientes generan `PKCS12` por defecto con una
+codificación que la librería de firmado de Android Gradle Plugin no sabe leer (falla con
+`KeytoolException: Tag number over 30 is not supported`). `JKS` evita ese problema.
 
 Te pedirá una contraseña para el keystore y otra (puede ser la misma) para la clave. Guarda
 ese archivo `.keystore` en un sitio seguro **fuera del repositorio** — nunca lo subas a GitHub.
