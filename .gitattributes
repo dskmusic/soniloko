@@ -1,0 +1,4 @@
+# Force LF for the Gradle wrapper shell script — Windows checkouts can otherwise store it
+# with CRLF, which breaks `./gradlew` on the Linux GitHub Actions runner.
+gradlew text eol=lf
+*.sh text eol=lf
