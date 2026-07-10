@@ -109,7 +109,18 @@ jobs:
 
       - name: Decodificar keystore
         if: steps.newpipe.outputs.should_build == 'true'
-        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 -d > app/release.keystore
+        run: echo "${{ secrets.KEYSTORE_BASE64 }}" | tr -d '[:space:]' | base64 -d > app/release.keystore
+
+      - name: Verificar formato del keystore decodificado
+        if: steps.newpipe.outputs.should_build == 'true'
+        run: |
+          SIZE=$(wc -c < app/release.keystore)
+          MAGIC=$(od -An -tx1 -N 4 app/release.keystore | tr -d ' ')
+          echo "Tamaño: $SIZE bytes — magic bytes: $MAGIC"
+          if [ "$MAGIC" != "feedfeed" ]; then
+            echo "::error::El keystore decodificado NO es JKS (magic=$MAGIC, se esperaba feedfeed). El secret KEYSTORE_BASE64 en GitHub no contiene el keystore JKS actualizado (sigue con el PKCS12 antiguo, o la copia/pegado se corrompió). Regenera el base64 con [Convert]::ToBase64String([IO.File]::ReadAllBytes('ruta\\soniloko-release.keystore')) y actualiza el secret."
+            exit 1
+          fi
 
       - name: Dar permisos de ejecución a gradlew
         if: steps.newpipe.outputs.should_build == 'true'
