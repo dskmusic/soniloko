@@ -224,7 +224,14 @@ function playPreview(name) {
   audio.play().catch(() => {});
 }
 
+function renderCurrentKitName() {
+  const kit = STATE.builtinKits.find((k) => k.id === STATE.currentKitId) ||
+    STATE.customKits.find((k) => k.id === STATE.currentKitId);
+  document.getElementById("current-kit-name").textContent = kit ? (kit.name[resolvedLang()] || kit.name.en || kit.id) : "";
+}
+
 function renderBoard() {
+  renderCurrentKitName();
   const el = document.getElementById("board");
   el.innerHTML = "";
   STATE.board.forEach((btn) => {
@@ -426,6 +433,7 @@ function renderManageKitsList() {
         saveCustomKits();
         renderKitMenu();
         renderManageKitsList();
+        renderCurrentKitName();
       }
     });
     row.querySelector('[data-action="delete"]').addEventListener("click", () => {
@@ -846,6 +854,7 @@ function renderDurationChips() {
 function refreshAllText() {
   applyI18n();
   renderKitMenu();
+  renderCurrentKitName();
   renderSettingsPanel();
   if (!document.getElementById("edit-dialog").classList.contains("hidden")) renderEditDialog();
   renderHelpBody();

@@ -21,6 +21,11 @@ class BoardRepository(private val context: Context) {
         prefs[boardKey]?.let { JsonMapper.decodeBoard(it) } ?: loadDefaultFromAssets()
     }
 
+    /** Id of whichever kit is currently active, for display (e.g. a "current kit" label). */
+    val currentKitId: Flow<String?> = context.boardDataStore.data.map { prefs ->
+        prefs[currentKitIdKey] ?: defaultKitId()
+    }
+
     /** The "classic" kit in kits.json doubles as the factory-default board — one source of truth. */
     private fun loadDefaultFromAssets(): List<SoundButtonConfig> {
         val kits = loadKits()

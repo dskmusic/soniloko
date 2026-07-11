@@ -49,7 +49,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.dsk.soniloko.R
 import com.dsk.soniloko.data.SoundLibrary
 import com.dsk.soniloko.data.model.SoundKit
@@ -71,6 +73,7 @@ fun SoundboardScreen(
 ) {
     val buttons by viewModel.buttons.collectAsState()
     val customKits by viewModel.customKits.collectAsState()
+    val currentKitId by viewModel.currentKitId.collectAsState()
     val context = LocalContext.current
     var availableSounds by remember { mutableStateOf(SoundLibrary.listAvailableSounds(context)) }
     var showMenu by remember { mutableStateOf(false) }
@@ -84,6 +87,7 @@ fun SoundboardScreen(
     // name briefly in the speaker. Purely a navigation cursor — doesn't try to track whether
     // the board still matches whatever kit it last landed on.
     val allKits: List<SoundKit> = remember(customKits) { viewModel.kits + customKits }
+    val currentKitName = remember(allKits, currentKitId) { allKits.find { it.id == currentKitId }?.displayName() }
     var kitIndex by remember { mutableStateOf(0) }
     var kitFlashName by remember { mutableStateOf("") }
     var kitFlashTrigger by remember { mutableStateOf(0) }
@@ -228,6 +232,15 @@ fun SoundboardScreen(
                 kitNameFlashTrigger = kitFlashTrigger,
                 onPanicTap = { viewModel.stopAllSounds() }
             )
+            if (currentKitName != null) {
+                Text(
+                    text = currentKitName,
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    textAlign = TextAlign.Center,
+                    fontSize = 13.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                )
+            }
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
                 modifier = Modifier.weight(1f),

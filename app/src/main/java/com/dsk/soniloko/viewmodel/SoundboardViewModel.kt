@@ -43,6 +43,10 @@ class SoundboardViewModel(application: Application) : AndroidViewModel(applicati
     val customKits: StateFlow<List<SoundKit>> =
         customKitRepo.customKits.stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
+    /** Id of the kit the current board was loaded from/saved as, for a persistent "current kit" label. */
+    val currentKitId: StateFlow<String?> =
+        boardRepo.currentKitId.stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
     var editModeActive by mutableStateOf(false)
         private set
 
