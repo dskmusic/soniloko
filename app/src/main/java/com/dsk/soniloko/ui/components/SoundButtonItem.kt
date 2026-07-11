@@ -11,10 +11,14 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -48,6 +52,12 @@ import com.dsk.soniloko.data.ImageLibrary
 import com.dsk.soniloko.data.model.SoundButtonConfig
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+
+private fun defaultTextFromSoundFile(fileName: String): String =
+    fileName.substringBeforeLast('.').replace('_', ' ')
+        .split(' ')
+        .filter { it.isNotEmpty() }
+        .joinToString(" ") { it.replaceFirstChar(Char::uppercaseChar) }
 
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -155,19 +165,31 @@ fun SoundButtonItem(
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize()
             )
-        } else if (!config.customText.isNullOrBlank()) {
-            AutoSizeText(
-                text = config.customText,
-                color = MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.fillMaxWidth().padding(6.dp)
-            )
         } else {
-            Text(
-                text = icon?.codepoint ?: "?",
-                fontFamily = faFontFamily,
-                fontSize = 28.sp,
-                color = MaterialTheme.colorScheme.onPrimary
-            )
+            // Icon on top, text below — the text is either what the user typed, or (if
+            // they never set one) a default derived from the sound's own file name, so
+            // every button reads as something instead of a bare icon.
+            val displayText = remember(config.customText, config.soundFile) {
+                config.customText?.takeIf { it.isNotBlank() } ?: defaultTextFromSoundFile(config.soundFile)
+            }
+            Column(
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.Center,
+                modifier = Modifier.fillMaxWidth().padding(6.dp)
+            ) {
+                Text(
+                    text = icon?.codepoint ?: "?",
+                    fontFamily = faFontFamily,
+                    fontSize = 20.sp,
+                    color = MaterialTheme.colorScheme.onPrimary
+                )
+                Spacer(Modifier.height(2.dp))
+                AutoSizeText(
+                    text = displayText,
+                    color = MaterialTheme.colorScheme.onPrimary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
         }
         if (editMode) {
             Icon(

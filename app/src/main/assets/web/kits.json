@@ -5,14 +5,14 @@
       "name": { "es": "Memes 01", "en": "Memes 01" },
       "buttons": [
         {"id": 1, "icon": "drum", "sound": "tambor_comedia.mp3", "volume": 1.0},
-        {"id": 2, "icon": "skull", "sound": "aaaaaahhhhh.mp3", "volume": 1.0},
+        {"id": 2, "icon": "skull", "sound": "aaaaaahhhh.mp3", "volume": 1.0},
         {"id": 3, "icon": "frown", "sound": "ahh.mp3", "volume": 1.0},
         {"id": 4, "icon": "gamepad", "sound": "amongus.mp3", "volume": 1.0},
         {"id": 5, "icon": "bullhorn", "sound": "bocina.mp3", "volume": 1.0},
         {"id": 6, "icon": "thumbs-down", "sound": "bofetada.mp3", "volume": 1.0},
         {"id": 7, "icon": "music", "sound": "bra.mp3", "volume": 1.0},
         {"id": 8, "icon": "rocket", "sound": "cartoon_up.mp3", "volume": 1.0},
-        {"id": 9, "icon": "theater-masks", "sound": "chanchanchan_dramático.mp3", "volume": 1.0},
+        {"id": 9, "icon": "theater-masks", "sound": "chanchan_dramático.mp3", "volume": 1.0},
         {"id": 10, "icon": "film", "sound": "créditos_finales.mp3", "volume": 1.0},
         {"id": 11, "icon": "music", "sound": "disco_rayado.mp3", "volume": 1.0},
         {"id": 12, "icon": "bomb", "sound": "error.mp3", "volume": 1.0}
