@@ -1,4 +1,4 @@
-const CACHE_NAME = "soniloko-v2";
+const CACHE_NAME = "soniloko-v3";
 const SOUND_FILES = [
   "aaaaaahhhhh.mp3", "ahh.mp3", "amongus.mp3", "bob_esponja_error.mp3", "bocina.mp3",
   "bofetada.mp3", "bra.mp3", "cartoon_up.mp3", "chanchanchan_dramático.mp3",
