@@ -89,6 +89,10 @@ fun RecordSoundDialog(onDismiss: () -> Unit, onSaved: (name: String, tempFile: F
                 setAudioSource(MediaRecorder.AudioSource.MIC)
                 setOutputFormat(MediaRecorder.OutputFormat.MPEG_4)
                 setAudioEncoder(MediaRecorder.AudioEncoder.AAC)
+                // Without these, MediaRecorder falls back to the device's AAC codec defaults,
+                // which on many phones is as low as 8kHz/12kbps — audibly muffled/robotic voice.
+                setAudioEncodingBitRate(128_000)
+                setAudioSamplingRate(44_100)
                 setOutputFile(tempFile.absolutePath)
                 prepare()
                 start()

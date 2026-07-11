@@ -138,4 +138,10 @@
     <string name="check_updates_hint">Comprueba si hay una versión nueva de SoniLoko publicada en GitHub.</string>
     <string name="check_updates_button">Buscar actualizaciones</string>
     <string name="no_update_available">Ya tienes la última versión.</string>
+    <string name="standalone_search_images">Buscar imágenes</string>
+    <string name="standalone_search_sounds">Buscar sonidos</string>
+    <string name="save_as">Guardar como…</string>
+    <string name="save_choice_message">¿Dónde quieres guardarlo?</string>
+    <string name="image_saved">Imagen guardada</string>
+    <string name="sound_saved">Sonido guardado</string>
 </resources>

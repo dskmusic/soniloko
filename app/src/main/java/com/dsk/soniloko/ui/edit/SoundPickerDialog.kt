@@ -40,6 +40,7 @@ import androidx.compose.ui.window.Dialog
 import com.dsk.soniloko.R
 import com.dsk.soniloko.data.AppStorage
 import com.dsk.soniloko.data.SoundLibrary
+import com.dsk.soniloko.ui.components.StorageAccessPromptDialog
 import java.io.File
 
 @Composable
@@ -189,22 +190,7 @@ fun SoundPickerDialog(
     }
 
     if (showStoragePrompt) {
-        AlertDialog(
-            onDismissRequest = { showStoragePrompt = false },
-            title = { Text(stringResource(R.string.storage_permission_title)) },
-            text = { Text(stringResource(R.string.storage_permission_message)) },
-            confirmButton = {
-                TextButton(onClick = {
-                    context.startActivity(AppStorage.requestAllFilesAccessIntent(context))
-                    showStoragePrompt = false
-                }) {
-                    Text(stringResource(R.string.grant_storage_access))
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showStoragePrompt = false }) { Text(stringResource(R.string.cancel)) }
-            }
-        )
+        StorageAccessPromptDialog(onDismiss = { showStoragePrompt = false })
     }
 
     soundPendingDelete?.let { name ->

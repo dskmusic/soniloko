@@ -138,4 +138,10 @@
     <string name="check_updates_hint">Checks whether a newer version of SoniLoko has been published on GitHub.</string>
     <string name="check_updates_button">Check for updates</string>
     <string name="no_update_available">You already have the latest version.</string>
+    <string name="standalone_search_images">Search images</string>
+    <string name="standalone_search_sounds">Search sounds</string>
+    <string name="save_as">Save as…</string>
+    <string name="save_choice_message">Where do you want to save it?</string>
+    <string name="image_saved">Image saved</string>
+    <string name="sound_saved">Sound saved</string>
 </resources>

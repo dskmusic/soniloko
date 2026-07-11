@@ -27,7 +27,8 @@ Built by [DSK Music](https://dskmusic.com) — free tools for musicians since 20
 - 12-button skeuomorphic soundboard with a **speaker grille** that breathes and reacts to every tap
 - Physical-feeling **press feedback** (scale, shadow, deepens further on long-press)
 - Short **vibration** on tap (works even in silent/vibrate mode), toggleable
-- **Swipe left/right** to switch kits, with the kit name flashing briefly in the speaker
+- **Swipe left/right** to switch kits, with the kit name flashing briefly in the speaker, plus a
+  persistent current-kit label under the speaker so you always know what's loaded
 - 6 dark color themes
 
 ### 🎛️ Edit mode
@@ -50,6 +51,9 @@ Built by [DSK Music](https://dskmusic.com) — free tools for musicians since 20
   level/lives readout inside the speaker
 
 ### 📦 Everything else
+- **Search images/sounds or record a sound straight from the overflow menu**, no need to open a
+  button's editor first — same Pixabay/YouTube search and mic recording as edit mode, then choose
+  to save it into the app's own library or anywhere else via the system file picker
 - Export/import your whole configuration as `.json`
 - Export/import your own sounds as a `.zip`
 - **Self-updating** — checks GitHub Releases and installs new builds without the Play Store

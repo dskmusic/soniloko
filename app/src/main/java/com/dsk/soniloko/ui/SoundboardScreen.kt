@@ -1,5 +1,9 @@
 package com.dsk.soniloko.ui
 
+import android.graphics.Bitmap
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.Arrangement
@@ -53,16 +57,25 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dsk.soniloko.R
+import com.dsk.soniloko.data.AppStorage
+import com.dsk.soniloko.data.ImageLibrary
 import com.dsk.soniloko.data.SoundLibrary
 import com.dsk.soniloko.data.model.SoundKit
 import com.dsk.soniloko.ui.components.Footer
 import com.dsk.soniloko.ui.components.HelpDialog
+import com.dsk.soniloko.ui.components.SaveChoiceDialog
 import com.dsk.soniloko.ui.components.SoundButtonItem
 import com.dsk.soniloko.ui.components.SpeakerGrille
+import com.dsk.soniloko.ui.components.StorageAccessPromptDialog
 import com.dsk.soniloko.ui.edit.EditButtonDialog
+import com.dsk.soniloko.ui.edit.ImageSearchDialog
+import com.dsk.soniloko.ui.edit.RecordSoundDialog
+import com.dsk.soniloko.ui.edit.YoutubeSearchDialog
 import com.dsk.soniloko.ui.kits.ManageKitsDialog
 import com.dsk.soniloko.ui.kits.SaveKitDialog
+import com.dsk.soniloko.util.CreateDocumentWithHint
 import com.dsk.soniloko.viewmodel.SoundboardViewModel
+import java.io.File
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -80,6 +93,50 @@ fun SoundboardScreen(
     var showHelp by remember { mutableStateOf(false) }
     var showSaveKit by remember { mutableStateOf(false) }
     var showManageKits by remember { mutableStateOf(false) }
+
+    // Standalone image/sound search + record, reachable from the overflow menu without having
+    // to enter a button's edit dialog first. Same search/download dialogs as edit mode, plus a
+    // choice of where to save the result: the app's own folder (so it shows back up in the
+    // picker lists) or anywhere else via the system file picker.
+    var showImageSearchStandalone by remember { mutableStateOf(false) }
+    var showYoutubeSearchStandalone by remember { mutableStateOf(false) }
+    var showRecordSoundStandalone by remember { mutableStateOf(false) }
+    var showStandaloneStoragePrompt by remember { mutableStateOf(false) }
+    var pendingSaveImageBitmap by remember { mutableStateOf<Bitmap?>(null) }
+    var pendingSaveSound by remember { mutableStateOf<Pair<String, File>?>(null) }
+
+    fun runWithStorageAccess(action: () -> Unit) {
+        if (AppStorage.hasAllFilesAccess()) action() else showStandaloneStoragePrompt = true
+    }
+
+    val saveImageAsJpegLauncher = rememberLauncherForActivityResult(remember { CreateDocumentWithHint("image/jpeg") }) { uri ->
+        val bitmap = pendingSaveImageBitmap
+        if (uri != null && bitmap != null) {
+            context.contentResolver.openOutputStream(uri)?.use { out -> bitmap.compress(Bitmap.CompressFormat.JPEG, 90, out) }
+        }
+        pendingSaveImageBitmap = null
+    }
+    val saveImageAsPngLauncher = rememberLauncherForActivityResult(remember { CreateDocumentWithHint("image/png") }) { uri ->
+        val bitmap = pendingSaveImageBitmap
+        if (uri != null && bitmap != null) {
+            context.contentResolver.openOutputStream(uri)?.use { out -> bitmap.compress(Bitmap.CompressFormat.PNG, 100, out) }
+        }
+        pendingSaveImageBitmap = null
+    }
+    fun saveSoundToUri(uri: Uri, file: File) {
+        context.contentResolver.openOutputStream(uri)?.use { out -> file.inputStream().use { it.copyTo(out) } }
+        file.delete()
+    }
+    val saveSoundAsMp3Launcher = rememberLauncherForActivityResult(remember { CreateDocumentWithHint("audio/mpeg") }) { uri ->
+        val sound = pendingSaveSound
+        if (uri != null && sound != null) saveSoundToUri(uri, sound.second)
+        pendingSaveSound = null
+    }
+    val saveSoundAsM4aLauncher = rememberLauncherForActivityResult(remember { CreateDocumentWithHint("audio/mp4") }) { uri ->
+        val sound = pendingSaveSound
+        if (uri != null && sound != null) saveSoundToUri(uri, sound.second)
+        pendingSaveSound = null
+    }
 
     val gameModeActive = viewModel.gameModeActive
 
@@ -171,6 +228,28 @@ fun SoundboardScreen(
                                 )
                                 HorizontalDivider()
                                 DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.standalone_search_images)) },
+                                    onClick = {
+                                        showImageSearchStandalone = true
+                                        showMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.standalone_search_sounds)) },
+                                    onClick = {
+                                        showYoutubeSearchStandalone = true
+                                        showMenu = false
+                                    }
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.record_sound_title)) },
+                                    onClick = {
+                                        showRecordSoundStandalone = true
+                                        showMenu = false
+                                    }
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
                                     text = { Text(stringResource(R.string.game_mode)) },
                                     onClick = {
                                         viewModel.startGameMode()
@@ -223,7 +302,7 @@ fun SoundboardScreen(
                 )
         ) {
             SpeakerGrille(
-                Modifier.fillMaxWidth().padding(16.dp),
+                Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 16.dp),
                 dotColor = MaterialTheme.colorScheme.primary,
                 pulseTrigger = viewModel.playPulse,
                 gameLevel = if (gameModeActive) viewModel.gameLevel else null,
@@ -235,10 +314,11 @@ fun SoundboardScreen(
             if (currentKitName != null) {
                 Text(
                     text = currentKitName,
-                    modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                    modifier = Modifier.fillMaxWidth().padding(top = 3.dp, bottom = 5.dp),
                     textAlign = TextAlign.Center,
-                    fontSize = 13.sp,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                    fontSize = 12.sp,
+                    lineHeight = 12.sp,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                 )
             }
             LazyVerticalGrid(
@@ -298,6 +378,80 @@ fun SoundboardScreen(
             onRename = { id, newName -> viewModel.renameCustomKit(id, newName) },
             onDelete = { id -> viewModel.deleteCustomKit(id) }
         )
+    }
+
+    if (showImageSearchStandalone) {
+        ImageSearchDialog(
+            onDismiss = { showImageSearchStandalone = false },
+            onImageReady = { bitmap ->
+                showImageSearchStandalone = false
+                pendingSaveImageBitmap = bitmap
+            }
+        )
+    }
+    if (showYoutubeSearchStandalone) {
+        YoutubeSearchDialog(
+            onDismiss = { showYoutubeSearchStandalone = false },
+            onSaved = { name, file ->
+                showYoutubeSearchStandalone = false
+                pendingSaveSound = name to file
+            }
+        )
+    }
+    if (showRecordSoundStandalone) {
+        RecordSoundDialog(
+            onDismiss = { showRecordSoundStandalone = false },
+            onSaved = { name, file ->
+                showRecordSoundStandalone = false
+                pendingSaveSound = name to file
+            }
+        )
+    }
+
+    val imageSavedMessage = stringResource(R.string.image_saved)
+    pendingSaveImageBitmap?.let { bitmap ->
+        SaveChoiceDialog(
+            title = stringResource(R.string.standalone_search_images),
+            onDismiss = { pendingSaveImageBitmap = null },
+            onSaveHere = {
+                runWithStorageAccess {
+                    ImageLibrary.saveImage(bitmap)
+                    Toast.makeText(context, imageSavedMessage, Toast.LENGTH_SHORT).show()
+                    pendingSaveImageBitmap = null
+                }
+            },
+            onSaveAs = {
+                if (bitmap.hasAlpha()) saveImageAsPngLauncher.launch("soniloko_image.png")
+                else saveImageAsJpegLauncher.launch("soniloko_image.jpg")
+            }
+        )
+    }
+
+    val soundSavedMessage = stringResource(R.string.sound_saved)
+    pendingSaveSound?.let { (name, file) ->
+        SaveChoiceDialog(
+            title = stringResource(R.string.standalone_search_sounds),
+            onDismiss = {
+                file.delete()
+                pendingSaveSound = null
+            },
+            onSaveHere = {
+                runWithStorageAccess {
+                    SoundLibrary.saveRecording(file, name)
+                    Toast.makeText(context, soundSavedMessage, Toast.LENGTH_SHORT).show()
+                    pendingSaveSound = null
+                }
+            },
+            onSaveAs = {
+                val suggestedName = "${name}.${file.extension.ifBlank { "m4a" }}"
+                if (file.extension.equals("mp3", ignoreCase = true)) saveSoundAsMp3Launcher.launch(suggestedName)
+                else saveSoundAsM4aLauncher.launch(suggestedName)
+            }
+        )
+    }
+
+    if (showStandaloneStoragePrompt) {
+        StorageAccessPromptDialog(onDismiss = { showStandaloneStoragePrompt = false })
     }
 
     if (gameModeActive && viewModel.gameOver) {
