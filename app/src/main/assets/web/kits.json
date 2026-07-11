@@ -11,7 +11,7 @@
         {"id": 5, "icon": "bullhorn", "sound": "bocina.mp3", "volume": 1.0},
         {"id": 6, "icon": "thumbs-down", "sound": "bofetada.mp3", "volume": 1.0},
         {"id": 7, "icon": "music", "sound": "bra.mp3", "volume": 1.0},
-        {"id": 8, "icon": "rocket", "sound": "cartoon_up.mp3", "volume": 1.0},
+        {"id": 8, "icon": "meh", "sound": "oh_my_god_ooomagaaaa.mp3", "volume": 1.0},
         {"id": 9, "icon": "theater-masks", "sound": "chanchan_dramático.mp3", "volume": 1.0},
         {"id": 10, "icon": "film", "sound": "créditos_finales.mp3", "volume": 1.0},
         {"id": 11, "icon": "music", "sound": "disco_rayado.mp3", "volume": 1.0},
@@ -66,9 +66,7 @@
         {"id": 6, "icon": "drum", "sound": "tambor_redoble.mp3", "volume": 1.0},
         {"id": 7, "icon": "bell", "sound": "tipu.mp3", "volume": 1.0},
         {"id": 8, "icon": "frog", "sound": "tortuga_gimiendo1.mp3", "volume": 1.0},
-        {"id": 9, "icon": "frog", "sound": "tortuga_gimiendo2.mp3", "volume": 1.0},
-        {"id": 10, "icon": "meh", "sound": "oh_my_god_ooomagaaaa.mp3", "volume": 1.0}
-
+        {"id": 9, "icon": "frog", "sound": "tortuga_gimiendo2.mp3", "volume": 1.0}
       ]
     }
   ]
