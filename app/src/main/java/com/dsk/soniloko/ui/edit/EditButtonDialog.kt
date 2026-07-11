@@ -1,5 +1,6 @@
 package com.dsk.soniloko.ui.edit
 
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -7,6 +8,7 @@ import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -18,6 +20,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
@@ -46,7 +49,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.dsk.soniloko.R
 import com.dsk.soniloko.data.FontAwesomeIcons
-import com.dsk.soniloko.data.ImageCodec
+import com.dsk.soniloko.data.ImageLibrary
 import com.dsk.soniloko.data.model.SoundButtonConfig
 import com.dsk.soniloko.ui.components.AutoSizeText
 
@@ -64,10 +67,11 @@ fun EditButtonDialog(
     var iconName by remember { mutableStateOf(initial.iconName) }
     var soundFile by remember { mutableStateOf(initial.soundFile) }
     var volume by remember { mutableFloatStateOf(initial.volume) }
-    var customImage by remember { mutableStateOf(initial.customImageBase64) }
+    var customImageFile by remember { mutableStateOf(initial.customImageFile) }
     var customText by remember { mutableStateOf(initial.customText ?: "") }
     var showIconPicker by remember { mutableStateOf(false) }
     var showSoundPicker by remember { mutableStateOf(false) }
+    var showImageSearch by remember { mutableStateOf(false) }
     var pendingImageUri by remember { mutableStateOf<Uri?>(null) }
 
     val imagePickerLauncher = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { uri ->
@@ -80,8 +84,10 @@ fun EditButtonDialog(
                 Text(stringResource(R.string.edit_button_title), style = MaterialTheme.typography.titleLarge)
                 Spacer(Modifier.height(16.dp))
 
-                val previewBitmap = remember(customImage) {
-                    customImage?.let { ImageCodec.decode(it)?.asImageBitmap() }
+                val previewBitmap = remember(customImageFile) {
+                    customImageFile
+                        ?.let { ImageLibrary.resolveImageFile(it) }
+                        ?.let { BitmapFactory.decodeFile(it.absolutePath)?.asImageBitmap() }
                 }
                 Box(
                     Modifier
@@ -116,7 +122,9 @@ fun EditButtonDialog(
                     }
                 }
                 Row(
-                    Modifier.align(Alignment.CenterHorizontally),
+                    Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     TextButton(onClick = { showIconPicker = true }) {
@@ -125,10 +133,13 @@ fun EditButtonDialog(
                     TextButton(onClick = { imagePickerLauncher.launch("image/*") }) {
                         Text(stringResource(R.string.choose_image))
                     }
+                    TextButton(onClick = { showImageSearch = true }) {
+                        Text(stringResource(R.string.search_image_online))
+                    }
                 }
-                if (customImage != null) {
+                if (customImageFile != null) {
                     TextButton(
-                        onClick = { customImage = null },
+                        onClick = { customImageFile = null },
                         modifier = Modifier.align(Alignment.CenterHorizontally)
                     ) {
                         Text(stringResource(R.string.remove_image))
@@ -141,7 +152,7 @@ fun EditButtonDialog(
                     value = customText,
                     onValueChange = { newValue ->
                         customText = newValue
-                        if (newValue.isNotBlank()) customImage = null
+                        if (newValue.isNotBlank()) customImageFile = null
                     },
                     singleLine = false,
                     maxLines = 2,
@@ -163,12 +174,17 @@ fun EditButtonDialog(
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.width(8.dp))
                     Button(onClick = {
+                        // The old file (if replaced or removed) is only safe to delete once the
+                        // change is actually committed — cancelling the dialog must leave it intact.
+                        if (initial.customImageFile != null && initial.customImageFile != customImageFile) {
+                            ImageLibrary.deleteImage(initial.customImageFile)
+                        }
                         onSave(
                             initial.copy(
                                 iconName = iconName,
                                 soundFile = soundFile,
                                 volume = volume,
-                                customImageBase64 = customImage,
+                                customImageFile = customImageFile,
                                 customText = customText.trim().ifBlank { null }
                             )
                         )
@@ -186,7 +202,7 @@ fun EditButtonDialog(
             onDismiss = { showIconPicker = false },
             onSelect = {
                 iconName = it
-                customImage = null
+                customImageFile = null
                 customText = ""
                 showIconPicker = false
             }
@@ -207,12 +223,22 @@ fun EditButtonDialog(
             }
         )
     }
+    if (showImageSearch) {
+        ImageSearchDialog(
+            onDismiss = { showImageSearch = false },
+            onImageReady = { bitmap ->
+                customImageFile = ImageLibrary.saveImage(bitmap)
+                customText = ""
+                showImageSearch = false
+            }
+        )
+    }
     pendingImageUri?.let { uri ->
         ImageCropDialog(
             imageUri = uri,
             onDismiss = { pendingImageUri = null },
             onCropped = { bitmap ->
-                customImage = ImageCodec.encode(bitmap)
+                customImageFile = ImageLibrary.saveImage(bitmap)
                 customText = ""
                 pendingImageUri = null
             }

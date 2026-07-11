@@ -18,6 +18,7 @@ import java.io.File
 object AppStorage {
     private const val ROOT_FOLDER_NAME = "SoniLoko"
     private const val OWN_SOUNDS_FOLDER_NAME = "sonidos_propios"
+    private const val OWN_IMAGES_FOLDER_NAME = "imagenes_propias"
 
     fun hasAllFilesAccess(): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) Environment.isExternalStorageManager() else true
@@ -39,6 +40,13 @@ object AppStorage {
     fun ownSoundsFolder(): File? {
         val root = soniLokoFolder() ?: return null
         val own = File(root, OWN_SOUNDS_FOLDER_NAME)
+        if (!own.exists() && !own.mkdirs()) return null
+        return own
+    }
+
+    fun ownImagesFolder(): File? {
+        val root = soniLokoFolder() ?: return null
+        val own = File(root, OWN_IMAGES_FOLDER_NAME)
         if (!own.exists() && !own.mkdirs()) return null
         return own
     }

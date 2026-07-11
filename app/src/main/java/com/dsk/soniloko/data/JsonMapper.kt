@@ -7,7 +7,13 @@ import org.json.JSONArray
 import org.json.JSONObject
 
 object JsonMapper {
-    private fun buttonsToJsonArray(buttons: List<SoundButtonConfig>): JSONArray =
+    /**
+     * [portable] = true embeds the image as base64 (for the user-facing config export, so the
+     * resulting .json is self-contained and works after a reinstall/on another device).
+     * [portable] = false (default) writes just the file name, used for the app's own internal
+     * board/kits persistence, which reads the real file from ImageLibrary at runtime.
+     */
+    private fun buttonsToJsonArray(buttons: List<SoundButtonConfig>, portable: Boolean = false): JSONArray =
         JSONArray().apply {
             buttons.forEach { b ->
                 put(
@@ -16,34 +22,43 @@ object JsonMapper {
                         put("icon", b.iconName)
                         put("sound", b.soundFile)
                         put("volume", b.volume.toDouble())
-                        put("image", b.customImageBase64 ?: JSONObject.NULL)
+                        if (portable) {
+                            put("image", b.customImageFile?.let { ImageLibrary.encodeFileAsBase64(it) } ?: JSONObject.NULL)
+                        } else {
+                            put("imageFile", b.customImageFile ?: JSONObject.NULL)
+                        }
                         put("text", b.customText ?: JSONObject.NULL)
                     }
                 )
             }
         }
 
+    /** Reads either form: a direct file reference (internal persistence), or legacy/portable
+     * inline base64 — which gets migrated into a real file in ImageLibrary on the spot. */
     private fun jsonArrayToButtons(arr: JSONArray): List<SoundButtonConfig> =
         (0 until arr.length()).map { i ->
             val o = arr.getJSONObject(i)
+            val fileRef = if (o.isNull("imageFile")) null else o.optString("imageFile").takeIf { it.isNotBlank() }
+            val base64 = if (o.isNull("image")) null else o.optString("image").takeIf { it.isNotBlank() }
+            val imageFile = fileRef ?: base64?.let { ImageLibrary.saveBase64AsNewFile(it) }
             SoundButtonConfig(
                 id = o.getInt("id"),
                 iconName = o.getString("icon"),
                 soundFile = o.getString("sound"),
                 volume = o.optDouble("volume", 1.0).toFloat(),
-                customImageBase64 = if (o.isNull("image")) null else o.optString("image").takeIf { it.isNotBlank() },
+                customImageFile = imageFile,
                 customText = if (o.isNull("text")) null else o.optString("text").takeIf { it.isNotBlank() }
             )
         }
 
-    private fun kitsToJsonArray(kits: List<SoundKit>): JSONArray =
+    private fun kitsToJsonArray(kits: List<SoundKit>, portable: Boolean = false): JSONArray =
         JSONArray().apply {
             kits.forEach { kit ->
                 put(
                     JSONObject().apply {
                         put("id", kit.id)
                         put("name", JSONObject().apply { kit.namesByLang.forEach { (lang, name) -> put(lang, name) } })
-                        put("buttons", buttonsToJsonArray(kit.buttons))
+                        put("buttons", buttonsToJsonArray(kit.buttons, portable))
                     }
                 )
             }
@@ -106,8 +121,8 @@ object JsonMapper {
                 put("reclipServerUrl", settings.reclipServerUrl)
             }
         )
-        root.put("buttons", buttonsToJsonArray(buttons))
-        root.put("customKits", kitsToJsonArray(customKits))
+        root.put("buttons", buttonsToJsonArray(buttons, portable = true))
+        root.put("customKits", kitsToJsonArray(customKits, portable = true))
         return root.toString(2)
     }
 

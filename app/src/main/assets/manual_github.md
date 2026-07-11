@@ -80,6 +80,7 @@ Crea estos cuatro, exactamente con estos nombres:
 | `KEYSTORE_PASSWORD` | La contraseña del keystore |
 | `KEY_ALIAS` | El alias que usaste (`soniloko` en el ejemplo del paso 4) |
 | `KEY_PASSWORD` | La contraseña de la clave |
+| `PIXABAY_API_KEY` | Tu API key gratuita de [pixabay.com/api/docs](https://pixabay.com/api/docs/) (para el buscador de imágenes online) |
 
 ## 7. Dar permisos de escritura a las Actions
 

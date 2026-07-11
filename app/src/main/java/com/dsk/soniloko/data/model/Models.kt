@@ -19,9 +19,10 @@ data class SoundButtonConfig(
     val iconName: String,
     val soundFile: String,
     val volume: Float = 1f,
-    /** Base64-encoded JPEG. Takes priority over [customText] and the icon when set. */
-    val customImageBase64: String? = null,
-    /** Custom label shown on the button. Takes priority over the icon, but not over [customImageBase64]. */
+    /** File name of a JPEG in SoniLoko/imagenes_propias (see ImageLibrary). Takes priority over
+     * [customText] and the icon when set. */
+    val customImageFile: String? = null,
+    /** Custom label shown on the button. Takes priority over the icon, but not over [customImageFile]. */
     val customText: String? = null
 )
 

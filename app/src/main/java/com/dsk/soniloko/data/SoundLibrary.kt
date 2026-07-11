@@ -107,10 +107,12 @@ object SoundLibrary {
         files.size
     }.getOrNull()
 
-    /** Extracts every audio entry from [srcUri] into sonidos_propios. Returns how many were
-     * imported, or null on failure. */
-    fun importOwnSoundsZip(context: Context, srcUri: Uri): Int? = runCatching {
+    /** Extracts every audio entry from [srcUri] into sonidos_propios. When [replace] is true,
+     * existing own sounds are deleted first instead of adding alongside them. Returns how many
+     * were imported, or null on failure. */
+    fun importOwnSoundsZip(context: Context, srcUri: Uri, replace: Boolean): Int? = runCatching {
         val folder = AppStorage.ownSoundsFolder() ?: return null
+        if (replace) folder.listFiles()?.forEach { if (it.isFile) it.delete() }
         var count = 0
         context.contentResolver.openInputStream(srcUri)?.use { input ->
             ZipInputStream(input).use { zip ->

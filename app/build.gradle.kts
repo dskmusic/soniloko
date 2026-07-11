@@ -1,8 +1,23 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
     alias(libs.plugins.kotlin.compose)
 }
+
+// Pixabay API key for the online image search: never hardcoded (this repo is public). Locally,
+// put PIXABAY_API_KEY=... in local.properties (gitignored); CI supplies it via a Gradle
+// property (-PPIXABAY_API_KEY=...) sourced from a GitHub Actions secret.
+val pixabayApiKey: String = (project.findProperty("PIXABAY_API_KEY") as String?)
+    ?: run {
+        // Not `java.util.Properties()`: the Android plugin injects a `java` extension accessor
+        // into this script's scope that shadows the `java.*` package prefix here.
+        val localProps = Properties()
+        val localFile = rootProject.file("local.properties")
+        if (localFile.exists()) localFile.inputStream().use { localProps.load(it) }
+        localProps.getProperty("PIXABAY_API_KEY", "")
+    }
 
 android {
     namespace = "com.dsk.soniloko"
@@ -14,6 +29,7 @@ android {
         targetSdk = 35
         versionCode = 3
         versionName = "1.3"
+        buildConfigField("String", "PIXABAY_API_KEY", "\"$pixabayApiKey\"")
     }
 
     buildTypes {
@@ -37,6 +53,7 @@ android {
 
     buildFeatures {
         compose = true
+        buildConfig = true
     }
 }
 

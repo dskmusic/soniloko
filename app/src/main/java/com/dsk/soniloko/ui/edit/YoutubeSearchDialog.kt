@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
@@ -72,6 +73,7 @@ private const val PAGE_SIZE = 15
 fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: File) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
+    val keyboardController = LocalSoftwareKeyboardController.current
 
     var query by remember { mutableStateOf("") }
     var results by remember { mutableStateOf<List<YtSearchResult>>(emptyList()) }
@@ -111,6 +113,7 @@ fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: Fil
     fun doSearch() {
         val q = query.trim()
         if (q.isBlank()) return
+        keyboardController?.hide()
         stopPreview()
         searching = true
         errorMsg = null

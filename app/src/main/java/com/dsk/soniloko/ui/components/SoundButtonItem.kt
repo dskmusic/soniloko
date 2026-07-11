@@ -1,5 +1,6 @@
 package com.dsk.soniloko.ui.components
 
+import android.graphics.BitmapFactory
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -43,7 +44,7 @@ import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.dsk.soniloko.data.FontAwesomeIcons
-import com.dsk.soniloko.data.ImageCodec
+import com.dsk.soniloko.data.ImageLibrary
 import com.dsk.soniloko.data.model.SoundButtonConfig
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -60,8 +61,10 @@ fun SoundButtonItem(
     highlighted: Boolean = false
 ) {
     val icon = remember(config.iconName) { FontAwesomeIcons.byName(config.iconName) }
-    val customBitmap = remember(config.customImageBase64) {
-        config.customImageBase64?.let { ImageCodec.decode(it)?.asImageBitmap() }
+    val customBitmap = remember(config.customImageFile) {
+        config.customImageFile
+            ?.let { ImageLibrary.resolveImageFile(it) }
+            ?.let { BitmapFactory.decodeFile(it.absolutePath)?.asImageBitmap() }
     }
     val shape = RoundedCornerShape(22.dp)
 
@@ -108,7 +111,9 @@ fun SoundButtonItem(
         label = "press-elevation"
     )
 
-    val baseColor = if (customBitmap != null) MaterialTheme.colorScheme.surface else MaterialTheme.colorScheme.primary
+    // Same vivid theme color as icon-only buttons: a custom image with real transparency
+    // should show through to that, not a separate muted/near-black "surface" backdrop.
+    val baseColor = MaterialTheme.colorScheme.primary
     val pressedColor = lerp(baseColor, Color.Black, 0.3f)
     val animatedColor by animateColorAsState(
         if (pressedVisual) pressedColor else baseColor,
@@ -124,7 +129,7 @@ fun SoundButtonItem(
             .clip(shape)
             .background(animatedColor)
             .then(
-                if (customBitmap != null) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, shape)
+                if (customBitmap != null) Modifier.border(3.dp, MaterialTheme.colorScheme.onPrimary, shape)
                 else Modifier
             )
             .then(
@@ -168,7 +173,7 @@ fun SoundButtonItem(
             Icon(
                 Icons.Filled.Edit,
                 contentDescription = null,
-                tint = if (customBitmap != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onPrimary,
+                tint = MaterialTheme.colorScheme.onPrimary,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
                     .padding(4.dp)

@@ -96,6 +96,11 @@ class SoundboardViewModel(application: Application) : AndroidViewModel(applicati
         }
     }
 
+    /** Panic button (tapping the speaker grille): stops every sound currently playing. */
+    fun stopAllSounds() {
+        soundEngine.stopAll()
+    }
+
     private fun vibrateIfEnabled() {
         if (settings.value.hapticFeedbackEnabled) HapticFeedback.tap(getApplication())
     }
@@ -215,7 +220,7 @@ class SoundboardViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun applyKit(kit: SoundKit) {
-        viewModelScope.launch { boardRepo.saveBoard(kit.buttons) }
+        viewModelScope.launch { boardRepo.applyKit(kit) }
     }
 
     /** Saves the current board layout (icons, images, sounds, volumes) as a new custom kit. */

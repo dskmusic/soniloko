@@ -132,6 +132,9 @@ class SoundEngine(private val context: Context) {
         }
     }
 
+    /** Panic-stops every sound currently playing (SoundPool streams and the long-sound player). */
+    fun stopAll() = stopAllActive()
+
     private fun stopAllActive() {
         activeStreamIds.forEach { runCatching { soundPool.stop(it) } }
         activeStreamIds.clear()

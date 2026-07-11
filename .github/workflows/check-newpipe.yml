@@ -142,6 +142,7 @@ jobs:
               -Pandroid.injected.signing.store.password="${{ secrets.KEYSTORE_PASSWORD }}" \
               -Pandroid.injected.signing.key.alias="${{ secrets.KEY_ALIAS }}" \
               -Pandroid.injected.signing.key.password="${{ secrets.KEY_PASSWORD }}" \
+              -PPIXABAY_API_KEY="${{ secrets.PIXABAY_API_KEY }}" \
               && break
             echo "Intento $i fallido, reintentando en 30s..."
             sleep 30

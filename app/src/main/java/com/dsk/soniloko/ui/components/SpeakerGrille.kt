@@ -7,6 +7,7 @@ import androidx.compose.animation.core.infiniteRepeatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -22,10 +23,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.dsk.soniloko.R
 import kotlinx.coroutines.delay
 
 /**
@@ -34,6 +37,7 @@ import kotlinx.coroutines.delay
  * When [gameLevel] is non-null (game mode active), a retro LED-style level/lives readout is
  * overlaid on top of the dots. When [kitNameFlashTrigger] changes, [kitNameFlash] briefly
  * fades in and out on top of the grille (e.g. after switching kits with a swipe).
+ * Tapping the grille itself is a panic button: [onPanicTap] should stop all playing sounds.
  */
 @Composable
 fun SpeakerGrille(
@@ -43,7 +47,8 @@ fun SpeakerGrille(
     gameLevel: Int? = null,
     gameLives: Int = 0,
     kitNameFlash: String? = null,
-    kitNameFlashTrigger: Int = 0
+    kitNameFlashTrigger: Int = 0,
+    onPanicTap: (() -> Unit)? = null
 ) {
     val idle = remember { Animatable(0f) }
     LaunchedEffect(Unit) {
@@ -74,7 +79,17 @@ fun SpeakerGrille(
         }
     }
 
-    Box(modifier.fillMaxWidth().height(96.dp)) {
+    val panicDescription = stringResource(R.string.stop_all_sounds)
+    Box(
+        modifier
+            .fillMaxWidth()
+            .height(96.dp)
+            .then(
+                if (onPanicTap != null) {
+                    Modifier.clickable(onClickLabel = panicDescription, onClick = onPanicTap)
+                } else Modifier
+            )
+    ) {
         Canvas(
             Modifier
                 .fillMaxWidth()

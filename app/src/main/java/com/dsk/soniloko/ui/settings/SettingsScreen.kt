@@ -1,5 +1,6 @@
 package com.dsk.soniloko.ui.settings
 
+import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.tween
@@ -65,6 +66,7 @@ import androidx.compose.ui.unit.dp
 import android.widget.Toast
 import com.dsk.soniloko.R
 import com.dsk.soniloko.data.AppStorage
+import com.dsk.soniloko.data.ImageLibrary
 import com.dsk.soniloko.data.SoundLibrary
 import com.dsk.soniloko.ui.theme.AppThemeOption
 import com.dsk.soniloko.update.UpdateChecker
@@ -111,12 +113,21 @@ fun SettingsScreen(viewModel: SoundboardViewModel, onBack: () -> Unit) {
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
     }
+    var pendingSoundsImportUri by remember { mutableStateOf<Uri?>(null) }
     val importSoundsZipLauncher = rememberLauncherForActivityResult(remember { OpenDocumentWithHint() }) { uri ->
+        if (uri != null) pendingSoundsImportUri = uri
+    }
+
+    val exportImagesZipLauncher = rememberLauncherForActivityResult(remember { CreateDocumentWithHint("application/zip") }) { uri ->
         uri?.let {
-            val count = SoundLibrary.importOwnSoundsZip(context, it)
-            val message = if (count != null) context.getString(R.string.import_sounds_result, count) else context.getString(R.string.youtube_error)
+            val count = ImageLibrary.exportOwnImagesZip(context, it)
+            val message = if (count != null) context.getString(R.string.export_images_result, count) else context.getString(R.string.youtube_error)
             Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
         }
+    }
+    var pendingImagesImportUri by remember { mutableStateOf<Uri?>(null) }
+    val importImagesZipLauncher = rememberLauncherForActivityResult(remember { OpenDocumentWithHint() }) { uri ->
+        if (uri != null) pendingImagesImportUri = uri
     }
 
     val scrollState = rememberScrollState()
@@ -274,6 +285,20 @@ fun SettingsScreen(viewModel: SoundboardViewModel, onBack: () -> Unit) {
             }
 
             SettingsCard {
+                Text(stringResource(R.string.custom_images_title), style = MaterialTheme.typography.titleMedium)
+                Text(stringResource(R.string.custom_images_hint), style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(8.dp))
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    OutlinedButton(onClick = { exportImagesZipLauncher.launch("soniloko_imagenes.zip") }) {
+                        Text(stringResource(R.string.export_images_zip))
+                    }
+                    OutlinedButton(onClick = { importImagesZipLauncher.launch(arrayOf("application/zip")) }) {
+                        Text(stringResource(R.string.import_images_zip))
+                    }
+                }
+            }
+
+            SettingsCard {
                 Text(stringResource(R.string.reclip_server_title), style = MaterialTheme.typography.titleMedium)
                 Text(stringResource(R.string.reclip_server_hint), style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
@@ -398,6 +423,57 @@ fun SettingsScreen(viewModel: SoundboardViewModel, onBack: () -> Unit) {
             }
         )
     }
+
+    pendingSoundsImportUri?.let { uri ->
+        ImportChoiceDialog(
+            onDismiss = { pendingSoundsImportUri = null },
+            onAdd = {
+                val count = SoundLibrary.importOwnSoundsZip(context, uri, replace = false)
+                val message = if (count != null) context.getString(R.string.import_sounds_result, count) else context.getString(R.string.youtube_error)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                pendingSoundsImportUri = null
+            },
+            onReplace = {
+                val count = SoundLibrary.importOwnSoundsZip(context, uri, replace = true)
+                val message = if (count != null) context.getString(R.string.import_sounds_result, count) else context.getString(R.string.youtube_error)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                pendingSoundsImportUri = null
+            }
+        )
+    }
+    pendingImagesImportUri?.let { uri ->
+        ImportChoiceDialog(
+            onDismiss = { pendingImagesImportUri = null },
+            onAdd = {
+                val count = ImageLibrary.importOwnImagesZip(context, uri, replace = false)
+                val message = if (count != null) context.getString(R.string.import_images_result, count) else context.getString(R.string.youtube_error)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                pendingImagesImportUri = null
+            },
+            onReplace = {
+                val count = ImageLibrary.importOwnImagesZip(context, uri, replace = true)
+                val message = if (count != null) context.getString(R.string.import_images_result, count) else context.getString(R.string.youtube_error)
+                Toast.makeText(context, message, Toast.LENGTH_SHORT).show()
+                pendingImagesImportUri = null
+            }
+        )
+    }
+}
+
+/** Asks whether a zip import should add to the current own sounds/images or replace them entirely. */
+@Composable
+private fun ImportChoiceDialog(onDismiss: () -> Unit, onAdd: () -> Unit, onReplace: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.import_zip_choice_title)) },
+        text = { Text(stringResource(R.string.import_zip_choice_message)) },
+        confirmButton = {
+            TextButton(onClick = onReplace) { Text(stringResource(R.string.import_zip_replace)) }
+        },
+        dismissButton = {
+            TextButton(onClick = onAdd) { Text(stringResource(R.string.import_zip_add)) }
+        }
+    )
 }
 
 @Composable

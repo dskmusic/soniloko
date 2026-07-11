@@ -225,7 +225,8 @@ fun SoundboardScreen(
                 gameLevel = if (gameModeActive) viewModel.gameLevel else null,
                 gameLives = viewModel.gameLives,
                 kitNameFlash = kitFlashName,
-                kitNameFlashTrigger = kitFlashTrigger
+                kitNameFlashTrigger = kitFlashTrigger,
+                onPanicTap = { viewModel.stopAllSounds() }
             )
             LazyVerticalGrid(
                 columns = GridCells.Fixed(3),
