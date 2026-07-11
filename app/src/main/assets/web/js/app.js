@@ -114,10 +114,11 @@ async function boot() {
   }
 
   if (!STATE.board) {
-    const classic = STATE.builtinKits.find((k) => k.id === "classic");
-    STATE.board = classic
-      ? classic.buttons.map((b) => blankBoardButton(b.id, b.icon, b.sound))
+    const initialKit = STATE.builtinKits.find((k) => k.id === "classic") || STATE.builtinKits[0];
+    STATE.board = initialKit
+      ? initialKit.buttons.map((b) => blankBoardButton(b.id, b.icon, b.sound))
       : Array.from({ length: 12 }, (_, i) => blankBoardButton(i + 1, "star", BUNDLED_SOUNDS[i % BUNDLED_SOUNDS.length]));
+    if (initialKit) STATE.currentKitId = initialKit.id;
     saveBoard();
   }
 

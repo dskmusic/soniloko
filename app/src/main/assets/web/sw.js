@@ -43,10 +43,32 @@ self.addEventListener("activate", (event) => {
   );
 });
 
+// kits.json is edited by users/devs directly, so it must be network-first,
+// otherwise the SW would keep serving a stale copy until CACHE_NAME changes.
+function isKitsJson(request) {
+  return new URL(request.url).pathname.endsWith("/kits.json");
+}
+
 // Cache-first, falling back to network and opportunistically caching new GET responses
 // (covers user-imported/recorded content requested at runtime, e.g. re-fetched sound files).
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") return;
+
+  if (isKitsJson(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const clone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => cache.put(event.request, clone));
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+
   event.respondWith(
     caches.match(event.request).then((cached) => {
       if (cached) return cached;
