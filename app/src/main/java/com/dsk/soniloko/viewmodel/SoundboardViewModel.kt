@@ -228,15 +228,15 @@ class SoundboardViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     /** Saves the current board layout (icons, images, sounds, volumes) as a new custom kit. */
-    fun saveCurrentAsKit(name: String) {
+    fun saveCurrentAsKit(name: String) = createCustomKit(name, buttons.value)
+
+    /** Saves an independently-built set of buttons (from the new-kit builder) as a new custom
+     * kit, and immediately loads it onto the board so it shows up as the active kit. */
+    fun createCustomKit(name: String, kitButtons: List<SoundButtonConfig>) {
+        val kit = SoundKit(id = UUID.randomUUID().toString(), namesByLang = mapOf("es" to name, "en" to name), buttons = kitButtons)
         viewModelScope.launch {
-            customKitRepo.addKit(
-                SoundKit(
-                    id = UUID.randomUUID().toString(),
-                    namesByLang = mapOf("es" to name, "en" to name),
-                    buttons = buttons.value
-                )
-            )
+            customKitRepo.addKit(kit)
+            boardRepo.applyKit(kit)
         }
     }
 
@@ -244,8 +244,34 @@ class SoundboardViewModel(application: Application) : AndroidViewModel(applicati
         viewModelScope.launch { customKitRepo.renameKit(id, newName) }
     }
 
+    /** Overwrites an already-created custom kit's name and buttons — used by the kit builder
+     * when reopened to edit an existing kit (add more buttons, tweak existing ones, rename) —
+     * and reloads it onto the board so the edits show up immediately. */
+    fun updateCustomKit(id: String, name: String, kitButtons: List<SoundButtonConfig>) {
+        val kit = SoundKit(id = id, namesByLang = mapOf("es" to name, "en" to name), buttons = kitButtons)
+        viewModelScope.launch {
+            customKitRepo.updateKit(id, name, kitButtons)
+            boardRepo.applyKit(kit)
+        }
+    }
+
+    /** Appends a new default button to the live board — the edit-mode "+" tile, so a kit with
+     * room left (under the 12-button grid) can grow without going through the kit builder. */
+    fun addBoardButton(availableSounds: List<String>) {
+        val nextId = (buttons.value.maxOfOrNull { it.id } ?: 0) + 1
+        val newButton = SoundButtonConfig(id = nextId, iconName = "music", soundFile = availableSounds.firstOrNull() ?: "", volume = 1f)
+        viewModelScope.launch { boardRepo.saveBoard(buttons.value + newButton) }
+    }
+
+    /** Deletes a custom kit; if it was the active one, falls back to the first bundled kit
+     * so the board never keeps showing a kit that no longer exists. */
     fun deleteCustomKit(id: String) {
-        viewModelScope.launch { customKitRepo.deleteKit(id) }
+        viewModelScope.launch {
+            customKitRepo.deleteKit(id)
+            if (currentKitId.value == id) {
+                kits.firstOrNull()?.let { boardRepo.applyKit(it) }
+            }
+        }
     }
 
     fun setMasterVolume(v: Float) {

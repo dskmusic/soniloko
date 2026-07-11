@@ -22,6 +22,7 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.MoreVert
@@ -71,18 +72,24 @@ import com.dsk.soniloko.ui.edit.EditButtonDialog
 import com.dsk.soniloko.ui.edit.ImageSearchDialog
 import com.dsk.soniloko.ui.edit.RecordSoundDialog
 import com.dsk.soniloko.ui.edit.YoutubeSearchDialog
+import com.dsk.soniloko.ui.kits.AddButtonTile
 import com.dsk.soniloko.ui.kits.ManageKitsDialog
 import com.dsk.soniloko.ui.kits.SaveKitDialog
 import com.dsk.soniloko.util.CreateDocumentWithHint
 import com.dsk.soniloko.viewmodel.SoundboardViewModel
 import java.io.File
 
+/** Same fixed board size as every kit in assets/kits.json (3 columns x 4 rows). */
+private const val MAX_BUTTONS = 12
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SoundboardScreen(
     viewModel: SoundboardViewModel,
     faFontFamily: FontFamily?,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onNewKit: () -> Unit,
+    onEditKit: (SoundKit) -> Unit
 ) {
     val buttons by viewModel.buttons.collectAsState()
     val customKits by viewModel.customKits.collectAsState()
@@ -197,9 +204,9 @@ fun SoundboardScreen(
                                     if (index == viewModel.kits.lastIndex) HorizontalDivider()
                                 }
                                 DropdownMenuItem(
-                                    text = { Text(stringResource(R.string.save_current_kit)) },
+                                    text = { Text(stringResource(R.string.new_kit)) },
                                     onClick = {
-                                        showSaveKit = true
+                                        onNewKit()
                                         showMenu = false
                                     }
                                 )
@@ -214,15 +221,30 @@ fun SoundboardScreen(
                                 }
                                 HorizontalDivider()
                                 DropdownMenuItem(
-                                    leadingIcon = { Icon(Icons.Filled.Edit, contentDescription = null) },
+                                    leadingIcon = {
+                                        Icon(
+                                            if (viewModel.editModeActive) Icons.Filled.Check else Icons.Filled.Edit,
+                                            contentDescription = null
+                                        )
+                                    },
                                     text = {
                                         Text(
-                                            if (viewModel.editModeActive) stringResource(R.string.exit_edit_mode)
+                                            if (viewModel.editModeActive) stringResource(R.string.save_current_kit)
                                             else stringResource(R.string.customize_sounds)
                                         )
                                     },
                                     onClick = {
-                                        viewModel.toggleEditMode()
+                                        if (viewModel.editModeActive) {
+                                            val activeCustomKit = customKits.firstOrNull { it.id == currentKitId }
+                                            if (activeCustomKit != null) {
+                                                viewModel.updateCustomKit(activeCustomKit.id, activeCustomKit.displayName(), buttons)
+                                                viewModel.toggleEditMode()
+                                            } else {
+                                                showSaveKit = true
+                                            }
+                                        } else {
+                                            viewModel.toggleEditMode()
+                                        }
                                         showMenu = false
                                     }
                                 )
@@ -340,6 +362,11 @@ fun SoundboardScreen(
                         onLongPress = { if (!gameModeActive) viewModel.onButtonLongPress(btn) }
                     )
                 }
+                if (viewModel.editModeActive && buttons.size < MAX_BUTTONS) {
+                    item {
+                        AddButtonTile(onClick = { viewModel.addBoardButton(availableSounds) })
+                    }
+                }
             }
         }
     }
@@ -366,6 +393,7 @@ fun SoundboardScreen(
             onDismiss = { showSaveKit = false },
             onSave = { name ->
                 viewModel.saveCurrentAsKit(name)
+                viewModel.toggleEditMode()
                 showSaveKit = false
             }
         )
@@ -376,6 +404,10 @@ fun SoundboardScreen(
             kits = customKits,
             onDismiss = { showManageKits = false },
             onRename = { id, newName -> viewModel.renameCustomKit(id, newName) },
+            onEdit = { kit ->
+                showManageKits = false
+                onEditKit(kit)
+            },
             onDelete = { id -> viewModel.deleteCustomKit(id) }
         )
     }

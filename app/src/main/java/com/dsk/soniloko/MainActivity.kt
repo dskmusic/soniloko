@@ -27,9 +27,11 @@ import androidx.core.os.LocaleListCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.dsk.soniloko.data.AppStorage
 import com.dsk.soniloko.data.OnboardingPrefs
+import com.dsk.soniloko.data.model.SoundKit
 import com.dsk.soniloko.ui.AppFonts
 import com.dsk.soniloko.ui.SoundboardScreen
 import com.dsk.soniloko.ui.components.FirstRunPermissionsDialog
+import com.dsk.soniloko.ui.kits.NewKitBuilderScreen
 import com.dsk.soniloko.ui.settings.SettingsScreen
 import com.dsk.soniloko.ui.theme.AppThemeOption
 import com.dsk.soniloko.ui.theme.SoniLokoTheme
@@ -58,6 +60,9 @@ class MainActivity : AppCompatActivity() {
 
             val faFontFamily = remember { AppFonts.loadFontAwesome(applicationContext) }
             var showSettings by remember { mutableStateOf(false) }
+            var showNewKitBuilder by remember { mutableStateOf(false) }
+            var editingCustomKit by remember { mutableStateOf<SoundKit?>(null) }
+            val showKitBuilder = showNewKitBuilder || editingCustomKit != null
             var showExitConfirm by remember { mutableStateOf(false) }
             var showFirstRunDialog by remember { mutableStateOf(!OnboardingPrefs.hasRequestedPermissions(applicationContext)) }
             var availableUpdate by remember { mutableStateOf<UpdateInfo?>(null) }
@@ -75,18 +80,28 @@ class MainActivity : AppCompatActivity() {
             }
 
             BackHandler(enabled = showSettings) { showSettings = false }
-            BackHandler(enabled = !showSettings && viewModel.editModeActive) { viewModel.toggleEditMode() }
-            BackHandler(enabled = !showSettings && !viewModel.editModeActive) { showExitConfirm = true }
+            BackHandler(enabled = showKitBuilder) { showNewKitBuilder = false; editingCustomKit = null }
+            BackHandler(enabled = !showSettings && !showKitBuilder && viewModel.editModeActive) { viewModel.toggleEditMode() }
+            BackHandler(enabled = !showSettings && !showKitBuilder && !viewModel.editModeActive) { showExitConfirm = true }
 
             SoniLokoTheme(themeOption = AppThemeOption.fromId(settings.theme)) {
                 Surface(modifier = Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
                     if (showSettings) {
                         SettingsScreen(viewModel = viewModel, onBack = { showSettings = false })
+                    } else if (showKitBuilder) {
+                        NewKitBuilderScreen(
+                            viewModel = viewModel,
+                            faFontFamily = faFontFamily,
+                            editingKit = editingCustomKit,
+                            onDone = { showNewKitBuilder = false; editingCustomKit = null }
+                        )
                     } else {
                         SoundboardScreen(
                             viewModel = viewModel,
                             faFontFamily = faFontFamily,
-                            onOpenSettings = { showSettings = true }
+                            onOpenSettings = { showSettings = true },
+                            onNewKit = { showNewKitBuilder = true },
+                            onEditKit = { kit -> editingCustomKit = kit }
                         )
                     }
                 }

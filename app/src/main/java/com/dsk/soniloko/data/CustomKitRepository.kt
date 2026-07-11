@@ -4,6 +4,7 @@ import android.content.Context
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.dsk.soniloko.data.model.SoundButtonConfig
 import com.dsk.soniloko.data.model.SoundKit
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -28,6 +29,15 @@ class CustomKitRepository(private val context: Context) {
             if (it.id == id) it.copy(namesByLang = mapOf("es" to newName, "en" to newName)) else it
         }
         saveAll(renamed)
+    }
+
+    /** Overwrites an existing kit's name and buttons in place — used to save edits made to an
+     * already-created custom kit (rename + add/edit buttons), as opposed to [addKit]. */
+    suspend fun updateKit(id: String, newName: String, buttons: List<SoundButtonConfig>) {
+        val updated = customKits.first().map {
+            if (it.id == id) it.copy(namesByLang = mapOf("es" to newName, "en" to newName), buttons = buttons) else it
+        }
+        saveAll(updated)
     }
 
     suspend fun deleteKit(id: String) {
