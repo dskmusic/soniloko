@@ -43,6 +43,7 @@ const DEFAULT_SETTINGS = {
 const STATE = {
   settings: loadJson("soniloko_settings", DEFAULT_SETTINGS),
   board: loadJson("soniloko_board", null),
+  currentKitId: loadJson("soniloko_current_kit_id", null),
   customKits: loadJson("soniloko_custom_kits", []),
   customSounds: loadJson("soniloko_custom_sounds", []),
   builtinKits: [],
@@ -76,7 +77,24 @@ function save(key, value) {
   localStorage.setItem(key, JSON.stringify(value));
 }
 function saveSettings() { save("soniloko_settings", STATE.settings); }
-function saveBoard() { save("soniloko_board", STATE.board); }
+function saveBoard() {
+  save("soniloko_board", STATE.board);
+  // Tag this save to whichever kit is active (falling back to the default kit if the user
+  // never explicitly switched yet) so switching away and back restores the customization
+  // instead of reloading the kit's pristine template — mirrors BoardRepository.kt.
+  const kitId = STATE.currentKitId || defaultKitId();
+  if (kitId) {
+    const overrides = loadJson("soniloko_kit_overrides", {});
+    overrides[kitId] = STATE.board;
+    save("soniloko_kit_overrides", overrides);
+  }
+}
+
+function defaultKitId() {
+  const classic = STATE.builtinKits.find((k) => k.id === "classic");
+  if (classic) return classic.id;
+  return STATE.builtinKits.length ? STATE.builtinKits[0].id : null;
+}
 function saveCustomKits() { save("soniloko_custom_kits", STATE.customKits); }
 function saveCustomSounds() { save("soniloko_custom_sounds", STATE.customSounds); }
 
@@ -164,8 +182,19 @@ function pulseSpeaker() {
 
 /* --------------------------------- Board ----------------------------------- */
 
+function defaultTextFromSoundFile(fileName) {
+  const dotIndex = fileName.lastIndexOf(".");
+  const base = dotIndex === -1 ? fileName : fileName.slice(0, dotIndex);
+  return base
+    .replace(/_/g, " ")
+    .split(" ")
+    .filter(Boolean)
+    .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+    .join(" ");
+}
+
 function soundDisplayName(name) {
-  return name;
+  return defaultTextFromSoundFile(name);
 }
 
 function resolveSoundSrc(name) {
@@ -220,16 +249,17 @@ function buttonContentNode(btn) {
     img.alt = "";
     return img;
   }
-  if (btn.customText) {
-    const span = document.createElement("span");
-    span.className = "btn-text";
-    span.textContent = btn.customText;
-    return span;
-  }
-  const span = document.createElement("span");
-  span.className = "fa";
-  span.textContent = faGlyph(btn.icon);
-  return span;
+  const wrap = document.createElement("div");
+  wrap.className = "btn-icon-text";
+  const iconSpan = document.createElement("span");
+  iconSpan.className = "fa";
+  iconSpan.textContent = faGlyph(btn.icon);
+  const textSpan = document.createElement("span");
+  textSpan.className = "btn-text";
+  textSpan.textContent = btn.customText || defaultTextFromSoundFile(btn.sound);
+  wrap.appendChild(iconSpan);
+  wrap.appendChild(textSpan);
+  return wrap;
 }
 
 function attachPressHandlers(div, btn) {
@@ -314,7 +344,7 @@ function renderKitMenu() {
     const btnEl = document.createElement("button");
     btnEl.className = "dropdown-item";
     btnEl.textContent = kit.name[resolvedLang()] || kit.name.en || kit.id;
-    btnEl.addEventListener("click", () => applyKit(kit.buttons));
+    btnEl.addEventListener("click", () => applyKit(kit));
     builtinWrap.appendChild(btnEl);
   });
 
@@ -322,14 +352,22 @@ function renderKitMenu() {
     const btnEl = document.createElement("button");
     btnEl.className = "dropdown-item";
     btnEl.textContent = kit.name[resolvedLang()] || kit.name.en || kit.id;
-    btnEl.addEventListener("click", () => applyKit(kit.buttons));
+    btnEl.addEventListener("click", () => applyKit(kit));
     customWrap.appendChild(btnEl);
   });
 }
 
-function applyKit(buttons) {
-  STATE.board = buttons.map((b) => blankBoardButton(b.id, b.icon, b.sound));
-  STATE.board.forEach((b, i) => { b.volume = buttons[i].volume || 1; });
+function applyKit(kit) {
+  const overrides = loadJson("soniloko_kit_overrides", {});
+  const override = overrides[kit.id];
+  if (override) {
+    STATE.board = JSON.parse(JSON.stringify(override));
+  } else {
+    STATE.board = kit.buttons.map((b) => blankBoardButton(b.id, b.icon, b.sound));
+    STATE.board.forEach((b, i) => { b.volume = kit.buttons[i].volume || 1; });
+  }
+  STATE.currentKitId = kit.id;
+  save("soniloko_current_kit_id", kit.id);
   saveBoard();
   renderBoard();
   hideEl("kit-menu");
@@ -815,7 +853,7 @@ function refreshAllText() {
 }
 
 function factoryReset() {
-  ["soniloko_settings", "soniloko_board", "soniloko_custom_kits", "soniloko_custom_sounds"].forEach((k) => localStorage.removeItem(k));
+  ["soniloko_settings", "soniloko_board", "soniloko_custom_kits", "soniloko_custom_sounds", "soniloko_current_kit_id", "soniloko_kit_overrides"].forEach((k) => localStorage.removeItem(k));
   location.reload();
 }
 
