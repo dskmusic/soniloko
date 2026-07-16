@@ -16,12 +16,14 @@ import com.dsk.soniloko.data.SoundLibrary
 import com.dsk.soniloko.data.model.AppSettings
 import com.dsk.soniloko.data.model.SoundButtonConfig
 import com.dsk.soniloko.data.model.SoundKit
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.util.UUID
 
 class SoundboardViewModel(application: Application) : AndroidViewModel(application) {
@@ -85,7 +87,9 @@ class SoundboardViewModel(application: Application) : AndroidViewModel(applicati
         }
         viewModelScope.launch {
             buttons.collect { list ->
-                soundEngine.preload(list.map { it.soundFile })
+                val files = list.map { it.soundFile }
+                soundEngine.preload(files)
+                withContext(Dispatchers.IO) { soundEngine.warmDurationCache(files) }
             }
         }
     }

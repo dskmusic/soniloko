@@ -9,7 +9,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Surface
@@ -20,14 +22,17 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import com.dsk.soniloko.R
 import com.dsk.soniloko.audio.AudioTrim
 import com.dsk.soniloko.ui.components.TrimControls
+import kotlinx.coroutines.launch
 import java.io.File
 
 /** Re-opens the trim tool on an already-saved own sound, and lets you rename it too;
@@ -42,6 +47,9 @@ fun EditSoundTrimDialog(
     var durationMs by remember { mutableIntStateOf(AudioTrim.loadDurationMs(file)) }
     var trimRange by remember { mutableStateOf(0f..1f) }
     var name by remember { mutableStateOf(file.nameWithoutExtension) }
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var saving by remember { mutableStateOf(false) }
 
     Dialog(onDismissRequest = onDismiss) {
         Surface(shape = RoundedCornerShape(20.dp), tonalElevation = 4.dp) {
@@ -67,22 +75,38 @@ fun EditSoundTrimDialog(
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.width(8.dp))
                     Button(
-                        enabled = durationMs > 0 && name.isNotBlank(),
+                        enabled = durationMs > 0 && name.isNotBlank() && !saving,
                         onClick = {
-                            val startMs = (trimRange.start * durationMs).toLong()
-                            val endMs = (trimRange.endInclusive * durationMs).toLong()
                             val isFullRange = trimRange.start <= 0.001f && trimRange.endInclusive >= 0.999f
-                            if (!isFullRange) AudioTrim.trimInPlace(file, startMs, endMs)
 
-                            val newBaseName = name.trim()
-                            if (newBaseName.isNotBlank() && newBaseName != file.nameWithoutExtension) {
-                                onRename(newBaseName) { onSaved() }
+                            fun finishSave() {
+                                val newBaseName = name.trim()
+                                if (newBaseName.isNotBlank() && newBaseName != file.nameWithoutExtension) {
+                                    onRename(newBaseName) { onSaved() }
+                                } else {
+                                    onSaved()
+                                }
+                            }
+
+                            if (isFullRange) {
+                                finishSave()
                             } else {
-                                onSaved()
+                                saving = true
+                                scope.launch {
+                                    val startMs = (trimRange.start * durationMs).toLong()
+                                    val endMs = (trimRange.endInclusive * durationMs).toLong()
+                                    AudioTrim.trimInPlace(context, file, startMs, endMs)
+                                    saving = false
+                                    finishSave()
+                                }
                             }
                         }
                     ) {
-                        Text(stringResource(R.string.save))
+                        if (saving) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        } else {
+                            Text(stringResource(R.string.save))
+                        }
                     }
                 }
             }

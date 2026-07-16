@@ -66,6 +66,8 @@ dependencies {
     implementation(libs.androidx.datastore.preferences)
     implementation(libs.newpipe)
     implementation(libs.okhttp)
+    implementation(libs.androidx.media3.exoplayer)
+    implementation(libs.androidx.media3.transformer)
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.ui)
     implementation(libs.androidx.ui.graphics)

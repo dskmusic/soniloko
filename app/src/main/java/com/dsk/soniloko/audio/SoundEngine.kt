@@ -10,6 +10,7 @@ import android.media.audiofx.LoudnessEnhancer
 import android.os.Handler
 import android.os.Looper
 import com.dsk.soniloko.data.SoundLibrary
+import java.util.concurrent.ConcurrentHashMap
 
 class SoundEngine(private val context: Context) {
     private val soundPool: SoundPool = SoundPool.Builder()
@@ -25,7 +26,9 @@ class SoundEngine(private val context: Context) {
     private val soundIds = mutableMapOf<String, Int>()
     private val loadedIds = mutableSetOf<Int>()
     private val pendingVolume = mutableMapOf<Int, Float>()
-    private val durationCache = mutableMapOf<String, Long>()
+    // Written from a background thread (warmDurationCache) and read/written from the main
+    // thread (play taps) concurrently — needs to be thread-safe.
+    private val durationCache = ConcurrentHashMap<String, Long>()
     private val activeStreamIds = mutableSetOf<Int>()
     private var longSoundPlayer: MediaPlayer? = null
     private var equalizer: Equalizer? = null
@@ -53,6 +56,13 @@ class SoundEngine(private val context: Context) {
         fileNames.distinct().forEach { fileName ->
             if (!soundIds.containsKey(fileName)) loadSound(fileName)
         }
+    }
+
+    /** Warms [durationCache] for every given file — call off the main thread. Without this,
+     * the first tap on each sound pays for a synchronous MediaMetadataRetriever read (used to
+     * decide SoundPool vs MediaPlayer) right before it plays, which is felt as tap-to-sound lag. */
+    fun warmDurationCache(fileNames: List<String>) {
+        fileNames.distinct().forEach { durationOf(it) }
     }
 
     /** Playback policy, all user-tunable from Settings. */

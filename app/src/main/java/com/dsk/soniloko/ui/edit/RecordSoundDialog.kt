@@ -14,9 +14,11 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -30,6 +32,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -41,6 +44,7 @@ import com.dsk.soniloko.R
 import com.dsk.soniloko.audio.AudioTrim
 import com.dsk.soniloko.ui.components.TrimControls
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
 
 private enum class RecordState { IDLE, RECORDING, RECORDED }
@@ -48,6 +52,8 @@ private enum class RecordState { IDLE, RECORDING, RECORDED }
 @Composable
 fun RecordSoundDialog(onDismiss: () -> Unit, onSaved: (name: String, tempFile: File) -> Unit) {
     val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var saving by remember { mutableStateOf(false) }
 
     var hasPermission by remember {
         mutableStateOf(
@@ -174,20 +180,28 @@ fun RecordSoundDialog(onDismiss: () -> Unit, onSaved: (name: String, tempFile: F
                     TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) }
                     Spacer(Modifier.width(8.dp))
                     Button(
-                        enabled = state == RecordState.RECORDED && name.isNotBlank(),
+                        enabled = state == RecordState.RECORDED && name.isNotBlank() && !saving,
                         onClick = {
                             val isFullRange = trimRange.start <= 0.001f && trimRange.endInclusive >= 0.999f
                             if (isFullRange || durationMs <= 0) {
                                 onSaved(name.trim(), tempFile)
                             } else {
-                                val startMs = (trimRange.start * durationMs).toLong()
-                                val endMs = (trimRange.endInclusive * durationMs).toLong()
-                                val trimmed = AudioTrim.trim(tempFile, startMs, endMs)
-                                onSaved(name.trim(), trimmed ?: tempFile)
+                                saving = true
+                                scope.launch {
+                                    val startMs = (trimRange.start * durationMs).toLong()
+                                    val endMs = (trimRange.endInclusive * durationMs).toLong()
+                                    val trimmed = AudioTrim.trim(context, tempFile, startMs, endMs)
+                                    saving = false
+                                    onSaved(name.trim(), trimmed ?: tempFile)
+                                }
                             }
                         }
                     ) {
-                        Text(stringResource(R.string.save))
+                        if (saving) {
+                            CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                        } else {
+                            Text(stringResource(R.string.save))
+                        }
                     }
                 }
             }

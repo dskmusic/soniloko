@@ -1,18 +1,23 @@
 package com.dsk.soniloko.data.youtube
 
+import android.content.Context
+import android.net.Uri
+import androidx.annotation.OptIn
+import androidx.media3.common.C
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSpec
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
-import okhttp3.Request
 import org.schabi.newpipe.extractor.InfoItem
 import org.schabi.newpipe.extractor.ListExtractor
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.services.youtube.linkHandler.YoutubeSearchQueryHandlerFactory
-import org.schabi.newpipe.extractor.stream.StreamInfo
+import org.schabi.newpipe.extractor.stream.StreamExtractor
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import java.io.File
-import java.util.concurrent.TimeUnit
 
 data class YtSearchResult(
     val videoId: String,
@@ -46,6 +51,23 @@ object YoutubeRepository {
     }
 
     private val yt get() = ServiceList.YouTube
+
+    // ponytail: single-entry cache, only the last-resolved video matters (preview -> download of
+    // the same result). Upgrade to a keyed cache if multiple in-flight lookups need to overlap.
+    @Volatile
+    private var cachedExtractor: Pair<String, StreamExtractor>? = null
+
+    // Deliberately NOT StreamInfo.getInfo(): that also calls getRelatedItems()/getFrames()/
+    // getSubtitlesDefault() etc., each of which can trigger its own extra network request for
+    // data preview/download never uses. Fetching the extractor directly and reading only
+    // audioStreams/videoStreams/name/uploaderName/length skips all of that.
+    private fun fetchExtractor(videoId: String): StreamExtractor {
+        cachedExtractor?.let { (id, ex) -> if (id == videoId) return ex }
+        val extractor = yt.getStreamExtractor("https://www.youtube.com/watch?v=$videoId")
+        extractor.fetchPage()
+        cachedExtractor = videoId to extractor
+        return extractor
+    }
 
     /**
      * Fetches up to [target] results, walking multiple result pages internally (the UI then
@@ -82,40 +104,64 @@ object YoutubeRepository {
         }.getOrDefault(emptyList())
     }
 
+    /** Resolves a pasted YouTube link (full or shared/shortened form) straight to a result,
+     * skipping search entirely — for when the user already knows the exact video. */
+    suspend fun resolveByUrl(url: String): YtSearchResult? = withContext(Dispatchers.IO) {
+        ensureInit()
+        runCatching {
+            val id = yt.streamLHFactory.getId(url)
+            val extractor = fetchExtractor(id)
+            YtSearchResult(id, extractor.name ?: id, extractor.uploaderName ?: "", extractor.length)
+        }.getOrNull()
+    }
+
     /** Best audio-only stream URL for direct streaming preview (URL expires after a few hours). */
     suspend fun resolvePreviewUrl(videoId: String): String? = withContext(Dispatchers.IO) {
         ensureInit()
         runCatching {
-            val info = StreamInfo.getInfo(yt, "https://www.youtube.com/watch?v=$videoId")
-            info.audioStreams?.filter { !it.content.isNullOrBlank() }?.maxByOrNull { it.averageBitrate }?.content
-                ?: info.videoStreams?.firstOrNull { !it.content.isNullOrBlank() }?.content
+            val extractor = fetchExtractor(videoId)
+            extractor.audioStreams?.filter { !it.content.isNullOrBlank() }?.maxByOrNull { it.averageBitrate }?.content
+                ?: extractor.videoStreams?.firstOrNull { !it.content.isNullOrBlank() }?.content
         }.getOrNull()
     }
 
     /**
      * Downloads the best available audio to [destFile]. Prefers m4a/AAC so the result is
-     * compatible with the app's existing MediaExtractor/MediaMuxer trim tool.
+     * compatible with the app's existing MediaExtractor/MediaMuxer trim tool. Reads through the
+     * same disk cache the preview player uses — if the user already previewed this video, this
+     * reuses those bytes instead of re-fetching them from the network.
      */
-    suspend fun downloadAudio(videoId: String, destFile: File): Boolean = withContext(Dispatchers.IO) {
+    @OptIn(UnstableApi::class)
+    suspend fun downloadAudio(context: Context, videoId: String, destFile: File): Boolean = withContext(Dispatchers.IO) {
         ensureInit()
         runCatching {
-            val info = StreamInfo.getInfo(yt, "https://www.youtube.com/watch?v=$videoId")
-            val audios = info.audioStreams?.filter { !it.content.isNullOrBlank() }
+            val extractor = fetchExtractor(videoId)
+            val audios = extractor.audioStreams?.filter { !it.content.isNullOrBlank() }
+            // Only m4a/AAC audio-only, or a combined stream (AAC audio track in an mp4 container),
+            // are used — anything else (e.g. WebM/Opus audio-only) would still get saved with a
+            // ".m4a" name below and later fail (or silently produce an invalid file) in
+            // AudioTrim's MediaMuxer(MPEG_4), which only accepts AAC.
             val chosen = audios?.filter { it.format?.suffix == "m4a" }?.maxByOrNull { it.averageBitrate }
-                ?: audios?.maxByOrNull { it.averageBitrate }
-                ?: info.videoStreams?.firstOrNull { !it.content.isNullOrBlank() }
+                ?: extractor.videoStreams?.firstOrNull { !it.content.isNullOrBlank() }
                 ?: return@withContext false
             val streamUrl = chosen.content ?: return@withContext false
 
-            val client = OkHttpClient.Builder()
-                .connectTimeout(30, TimeUnit.SECONDS)
-                .readTimeout(60, TimeUnit.SECONDS)
-                .build()
-            val request = Request.Builder().url(streamUrl).header("User-Agent", USER_AGENT).build()
-            client.newCall(request).execute().use { response ->
-                if (!response.isSuccessful) return@withContext false
-                val body = response.body ?: return@withContext false
-                destFile.outputStream().use { out -> body.byteStream().copyTo(out) }
+            val dataSource = CacheDataSource.Factory()
+                .setCache(YtStreamCache.get(context))
+                .setUpstreamDataSourceFactory(DefaultHttpDataSource.Factory().setUserAgent(USER_AGENT))
+                .createDataSource()
+            dataSource.open(DataSpec(Uri.parse(streamUrl)))
+            try {
+                destFile.outputStream().use { out ->
+                    val buffer = ByteArray(64 * 1024)
+                    while (true) {
+                        val read = dataSource.read(buffer, 0, buffer.size)
+                        if (read == C.RESULT_END_OF_INPUT) break
+                        out.write(buffer, 0, read)
+                    }
+                }
+            } finally {
+                dataSource.close()
             }
             true
         }.getOrDefault(false)

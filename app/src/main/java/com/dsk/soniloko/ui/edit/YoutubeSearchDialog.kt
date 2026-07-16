@@ -1,6 +1,6 @@
 package com.dsk.soniloko.ui.edit
 
-import android.media.MediaPlayer
+import androidx.annotation.OptIn
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -49,12 +49,21 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
+import androidx.media3.common.MediaItem
+import androidx.media3.common.Player
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DefaultHttpDataSource
+import androidx.media3.datasource.cache.CacheDataSource
+import androidx.media3.exoplayer.DefaultLoadControl
+import androidx.media3.exoplayer.ExoPlayer
+import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import com.dsk.soniloko.R
 import com.dsk.soniloko.audio.AudioTrim
 import com.dsk.soniloko.data.SettingsRepository
 import com.dsk.soniloko.data.youtube.ReclipRepository
 import com.dsk.soniloko.data.youtube.YoutubeRepository
 import com.dsk.soniloko.data.youtube.YtSearchResult
+import com.dsk.soniloko.data.youtube.YtStreamCache
 import com.dsk.soniloko.ui.components.TrimControls
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -82,7 +91,8 @@ fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: Fil
     var searching by remember { mutableStateOf(false) }
     var errorMsg by remember { mutableStateOf<String?>(null) }
     var previewingId by remember { mutableStateOf<String?>(null) }
-    var previewPlayer by remember { mutableStateOf<MediaPlayer?>(null) }
+    var saving by remember { mutableStateOf(false) }
+    var previewPlayer by remember { mutableStateOf<ExoPlayer?>(null) }
     var downloadingId by remember { mutableStateOf<String?>(null) }
 
     var stage by remember { mutableStateOf(YtStage.SEARCH) }
@@ -101,7 +111,7 @@ fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: Fil
     val visibleResults = remember(sortedResults, visibleCount) { sortedResults.take(visibleCount) }
 
     fun stopPreview() {
-        previewPlayer?.runCatching { stop(); release() }
+        previewPlayer?.release()
         previewPlayer = null
         previewingId = null
     }
@@ -118,7 +128,12 @@ fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: Fil
         searching = true
         errorMsg = null
         scope.launch {
-            val r = YoutubeRepository.search(q)
+            val isUrl = q.contains("youtube.com", ignoreCase = true) || q.contains("youtu.be", ignoreCase = true)
+            val r = if (isUrl) {
+                YoutubeRepository.resolveByUrl(q)?.let { listOf(it) } ?: emptyList()
+            } else {
+                YoutubeRepository.search(q)
+            }
             searching = false
             results = r
             visibleCount = PAGE_SIZE
@@ -126,6 +141,7 @@ fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: Fil
         }
     }
 
+    @OptIn(UnstableApi::class)
     fun togglePreview(result: YtSearchResult) {
         if (previewingId == result.videoId) {
             stopPreview()
@@ -141,11 +157,30 @@ fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: Fil
                 return@launch
             }
             runCatching {
-                val p = MediaPlayer()
-                p.setDataSource(url)
-                p.setOnCompletionListener { previewingId = null }
-                p.setOnPreparedListener { it.start() }
-                p.prepareAsync()
+                // ponytail: MediaPlayer can't be told to start after a small buffer — it waits for
+                // its own internal (larger, non-configurable) threshold. ExoPlayer's LoadControl
+                // lets a short preview start almost as soon as bytes arrive; raise
+                // bufferForPlaybackMs if this causes stutter on slow connections.
+                val loadControl = DefaultLoadControl.Builder()
+                    .setBufferDurationsMs(5_000, 15_000, 300, 500)
+                    .build()
+                // Reads/writes through the same disk cache "Descargar" uses, so a preview that's
+                // already played (fully or partially) doesn't get re-fetched from the network.
+                val cacheDataSourceFactory = CacheDataSource.Factory()
+                    .setCache(YtStreamCache.get(context))
+                    .setUpstreamDataSourceFactory(DefaultHttpDataSource.Factory())
+                val p = ExoPlayer.Builder(context)
+                    .setMediaSourceFactory(DefaultMediaSourceFactory(cacheDataSourceFactory))
+                    .setLoadControl(loadControl)
+                    .build()
+                p.addListener(object : Player.Listener {
+                    override fun onPlaybackStateChanged(state: Int) {
+                        if (state == Player.STATE_ENDED) previewingId = null
+                    }
+                })
+                p.setMediaItem(MediaItem.fromUri(url))
+                p.prepare()
+                p.playWhenReady = true
                 previewPlayer = p
             }.onFailure {
                 previewingId = null
@@ -179,7 +214,7 @@ fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: Fil
                 // Either reclip isn't configured, or it failed/timed out — fall back to
                 // on-device extraction so this still works without the optional server.
                 val fallbackTmp = File(context.cacheDir, "soniloko_yt_${System.currentTimeMillis()}.m4a")
-                if (YoutubeRepository.downloadAudio(result.videoId, fallbackTmp)) {
+                if (YoutubeRepository.downloadAudio(context, result.videoId, fallbackTmp)) {
                     finalFile = fallbackTmp
                 }
             }
@@ -294,22 +329,30 @@ fun YoutubeSearchDialog(onDismiss: () -> Unit, onSaved: (name: String, file: Fil
                     if (stage == YtStage.READY) {
                         Spacer(Modifier.width(8.dp))
                         Button(
-                            enabled = name.isNotBlank(),
+                            enabled = name.isNotBlank() && !saving,
                             onClick = {
                                 stopPreview()
                                 val file = downloadedFile ?: return@Button
                                 val isFullRange = trimRange.start <= 0.001f && trimRange.endInclusive >= 0.999f
-                                val finalFile = if (isFullRange || durationMs <= 0) {
-                                    file
+                                if (isFullRange || durationMs <= 0) {
+                                    onSaved(name.trim(), file)
                                 } else {
-                                    val startMs = (trimRange.start * durationMs).toLong()
-                                    val endMs = (trimRange.endInclusive * durationMs).toLong()
-                                    AudioTrim.trim(file, startMs, endMs) ?: file
+                                    saving = true
+                                    scope.launch {
+                                        val startMs = (trimRange.start * durationMs).toLong()
+                                        val endMs = (trimRange.endInclusive * durationMs).toLong()
+                                        val trimmed = AudioTrim.trim(context, file, startMs, endMs)
+                                        saving = false
+                                        onSaved(name.trim(), trimmed ?: file)
+                                    }
                                 }
-                                onSaved(name.trim(), finalFile)
                             }
                         ) {
-                            Text(stringResource(R.string.save))
+                            if (saving) {
+                                CircularProgressIndicator(modifier = Modifier.size(16.dp))
+                            } else {
+                                Text(stringResource(R.string.save))
+                            }
                         }
                     }
                 }
