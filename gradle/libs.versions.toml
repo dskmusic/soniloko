@@ -7,7 +7,7 @@ activityCompose = "1.9.3"
 composeBom = "2024.12.01"
 datastore = "1.1.1"
 appcompat = "1.7.0"
-newpipe = "v0.26.3"
+newpipe = "v0.26.4"
 okhttp = "4.12.0"
 media3 = "1.5.1"
 
