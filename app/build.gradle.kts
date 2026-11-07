@@ -27,8 +27,8 @@ android {
         applicationId = "com.dsk.soniloko"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.19"
+        versionCode = 20
+        versionName = "1.20"
         buildConfigField("String", "PIXABAY_API_KEY", "\"$pixabayApiKey\"")
     }
 
